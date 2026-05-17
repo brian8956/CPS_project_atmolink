@@ -18,7 +18,6 @@
     --border2: rgba(255,255,255,0.13);
     --text: #e8eaf0;
     --muted: #6b7280;
-    --accent: #3b82f6;
     --A: #60a5fa;
     --B: #34d399;
     --C: #f87171;
@@ -46,7 +45,6 @@
     font-size: 1.6rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    color: var(--text);
   }
 
   .title-block p {
@@ -71,7 +69,7 @@
   }
 
   .status-pill.connected { border-color: rgba(52,211,153,0.4); color: #34d399; }
-  .status-pill.error { border-color: rgba(248,113,113,0.4); color: #f87171; }
+  .status-pill.error     { border-color: rgba(248,113,113,0.4); color: #f87171; }
 
   .dot {
     width: 7px; height: 7px;
@@ -80,11 +78,9 @@
     transition: background 0.3s;
   }
   .connected .dot { background: #34d399; box-shadow: 0 0 6px #34d399; animation: pulse 2s infinite; }
-  .error .dot { background: #f87171; }
+  .error .dot     { background: #f87171; }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
-  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
   .cards {
     display: grid;
@@ -92,8 +88,7 @@
     gap: 12px;
     margin-bottom: 1.5rem;
   }
-
-  @media (max-width: 700px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 700px) { .cards { grid-template-columns: repeat(2,1fr); } }
 
   .card {
     background: var(--surface);
@@ -102,9 +97,7 @@
     padding: 1.1rem 1.2rem;
     position: relative;
     overflow: hidden;
-    transition: border-color 0.3s;
   }
-
   .card::before {
     content: '';
     position: absolute;
@@ -126,11 +119,7 @@
     align-items: center;
     gap: 6px;
   }
-
-  .sensor-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-  }
+  .sensor-dot { width: 8px; height: 8px; border-radius: 50%; }
 
   .card-humidity {
     font-size: 2rem;
@@ -139,19 +128,8 @@
     line-height: 1;
     margin-bottom: 4px;
   }
-
-  .card-temp {
-    font-size: 0.8rem;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-  }
-
-  .card-trend {
-    position: absolute;
-    top: 1rem; right: 1rem;
-    font-size: 0.7rem;
-    font-family: 'DM Mono', monospace;
-  }
+  .card-temp  { font-size: 0.8rem; font-family: 'DM Mono', monospace; color: var(--muted); }
+  .card-trend { position: absolute; top: 1rem; right: 1rem; font-size: 0.7rem; font-family: 'DM Mono', monospace; }
 
   .main-grid {
     display: grid;
@@ -159,7 +137,6 @@
     gap: 1.5rem;
     align-items: start;
   }
-
   @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } }
 
   .panel {
@@ -168,7 +145,6 @@
     border-radius: 12px;
     padding: 1.2rem;
   }
-
   .panel-title {
     font-size: 0.7rem;
     font-family: 'DM Mono', monospace;
@@ -178,57 +154,17 @@
     margin-bottom: 1rem;
   }
 
-  canvas#heatmap {
-    width: 100%;
-    border-radius: 8px;
-    display: block;
-  }
+  canvas#heatmap { width: 100%; border-radius: 8px; display: block; }
 
-  .legend {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-  }
+  .legend { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .legend-bar { flex: 1; height: 6px; border-radius: 3px; }
+  .legend-label { font-size: 0.7rem; font-family: 'DM Mono', monospace; color: var(--muted); min-width: 28px; }
 
-  .legend-bar {
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
-  }
+  .chart-wrap { position: relative; height: 260px; }
 
-  .legend-label {
-    font-size: 0.7rem;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-    min-width: 28px;
-  }
-
-  .chart-wrap {
-    position: relative;
-    height: 260px;
-  }
-
-  .chart-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-top: 12px;
-  }
-
-  .chart-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.72rem;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-  }
-
-  .legend-line {
-    width: 16px; height: 2px;
-    border-radius: 1px;
-  }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+  .chart-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; font-family: 'DM Mono', monospace; color: var(--muted); }
+  .legend-line { width: 16px; height: 2px; border-radius: 1px; }
 
   .gradient-info {
     margin-top: 10px;
@@ -238,9 +174,6 @@
     font-size: 0.72rem;
     font-family: 'DM Mono', monospace;
     color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   footer {
@@ -256,14 +189,8 @@
     padding-top: 1rem;
   }
 
-  .fade-in {
-    animation: fadeIn 0.5s ease forwards;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation: fadeIn 0.5s ease forwards; }
 </style>
 </head>
 <body>
@@ -337,189 +264,124 @@
 </div>
 
 <footer>
-  <span>broker.hivemq.com · topic: room/sensor/#</span>
+  <span>2aff883c85d24676a738e310f0dbc71d.s1.eu.hivemq.cloud · room/sensor/#</span>
   <span id="last-update">最後更新：—</span>
 </footer>
 
 <script>
-// ── 設定區 ──────────────────────────────────────────
-const BROKER_URL = 'wss://broker.hivemq.com:8884/mqtt';
-const TOPICS = {
-  A: 'room/sensor/A',
-  B: 'room/sensor/B',
-  C: 'room/sensor/C',
-  D: 'room/sensor/D'
-};
+const BROKER_URL = 'wss://2aff883c85d24676a738e310f0dbc71d.s1.eu.hivemq.cloud:8884/mqtt';
+const MQTT_USER  = 'Web_client';
+const MQTT_PASS  = 'Atomlink0517';
+const TOPICS = { A:'room/sensor/A', B:'room/sensor/B', C:'room/sensor/C', D:'room/sensor/D' };
 const MAX_POINTS = 40;
-const COLORS = { A: '#60a5fa', B: '#34d399', C: '#f87171', D: '#fbbf24' };
-// ────────────────────────────────────────────────────
+const COLORS = { A:'#60a5fa', B:'#34d399', C:'#f87171', D:'#fbbf24' };
 
-const state = { A: null, B: null, C: null, D: null };
-const prevH  = { A: null, B: null, C: null, D: null };
-const history = { A: [], B: [], C: [], D: [], labels: [] };
+const state  = { A:null, B:null, C:null, D:null };
+const prevH  = { A:null, B:null, C:null, D:null };
+const history = { A:[], B:[], C:[], D:[], labels:[] };
 
-// ── Chart.js 折線圖 ──────────────────────────────────
 const lineChart = new Chart(document.getElementById('lineChart'), {
   type: 'line',
   data: {
     labels: history.labels,
     datasets: ['A','B','C','D'].map(k => ({
-      label: k,
-      data: history[k],
-      borderColor: COLORS[k],
-      backgroundColor: 'transparent',
-      tension: 0.4,
-      pointRadius: 0,
-      borderWidth: 2
+      label: k, data: history[k],
+      borderColor: COLORS[k], backgroundColor: 'transparent',
+      tension: 0.4, pointRadius: 0, borderWidth: 2
     }))
   },
   options: {
-    responsive: true,
-    maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false,
     animation: { duration: 300 },
     plugins: { legend: { display: false } },
     scales: {
-      x: {
-        ticks: { maxTicksLimit: 6, font: { size: 11, family: 'DM Mono' }, color: '#6b7280' },
-        grid: { color: 'rgba(255,255,255,0.04)' }
-      },
-      y: {
-        min: 20, max: 100,
-        ticks: { font: { size: 11, family: 'DM Mono' }, color: '#6b7280', callback: v => v + '%' },
-        grid: { color: 'rgba(255,255,255,0.04)' }
-      }
+      x: { ticks: { maxTicksLimit: 6, font:{ size:11, family:'DM Mono' }, color:'#6b7280' }, grid:{ color:'rgba(255,255,255,0.04)' } },
+      y: { min:20, max:100, ticks:{ font:{ size:11, family:'DM Mono' }, color:'#6b7280', callback: v => v+'%' }, grid:{ color:'rgba(255,255,255,0.04)' } }
     }
   }
 });
 
-// ── 熱力圖 ──────────────────────────────────────────
 function drawHeatmap() {
   const canvas = document.getElementById('heatmap');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   const vals = ['A','B','C','D'].map(k => state[k]?.humidity).filter(v => v != null);
   if (vals.length < 4) {
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#181c23';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '13px DM Mono';
-    ctx.textAlign = 'center';
-    ctx.fillText('等待感測器資料...', W/2, H/2);
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#181c23'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#6b7280'; ctx.font = '13px DM Mono';
+    ctx.textAlign = 'center'; ctx.fillText('等待感測器資料...', W/2, H/2);
     return;
   }
-
-  const minH = Math.min(...vals) - 3;
-  const maxH = Math.max(...vals) + 3;
-
-  function toColor(h) {
-    const t = Math.max(0, Math.min(1, (h - minH) / (maxH - minH)));
-    return [
-      Math.round(20  + t * 220),
-      Math.round(80  + t * 60),
-      Math.round(220 - t * 180)
-    ];
-  }
-
+  const minH = Math.min(...vals)-3, maxH = Math.max(...vals)+3;
+  const toColor = h => {
+    const t = Math.max(0, Math.min(1, (h-minH)/(maxH-minH)));
+    return [Math.round(20+t*220), Math.round(80+t*60), Math.round(220-t*180)];
+  };
   const corners = [
-    { x: 0, y: 0, h: state.A.humidity },
-    { x: W, y: 0, h: state.B.humidity },
-    { x: 0, y: H, h: state.C.humidity },
-    { x: W, y: H, h: state.D.humidity }
+    {x:0,y:0,h:state.A.humidity}, {x:W,y:0,h:state.B.humidity},
+    {x:0,y:H,h:state.C.humidity}, {x:W,y:H,h:state.D.humidity}
   ];
-
-  const img = ctx.createImageData(W, H);
-  for (let py = 0; py < H; py++) {
-    for (let px = 0; px < W; px++) {
-      let wSum = 0, hSum = 0;
-      corners.forEach(c => {
-        const d = Math.sqrt((px-c.x)**2 + (py-c.y)**2) + 0.001;
-        const w = 1 / (d * d);
-        wSum += w; hSum += w * c.h;
-      });
-      const [r,g,b] = toColor(hSum / wSum);
-      const i = (py * W + px) * 4;
-      img.data[i] = r; img.data[i+1] = g; img.data[i+2] = b; img.data[i+3] = 220;
-    }
+  const img = ctx.createImageData(W,H);
+  for (let py=0;py<H;py++) for (let px=0;px<W;px++) {
+    let wSum=0,hSum=0;
+    corners.forEach(c => { const d=Math.sqrt((px-c.x)**2+(py-c.y)**2)+0.001; const w=1/(d*d); wSum+=w; hSum+=w*c.h; });
+    const [r,g,b] = toColor(hSum/wSum);
+    const i=(py*W+px)*4; img.data[i]=r; img.data[i+1]=g; img.data[i+2]=b; img.data[i+3]=220;
   }
-  ctx.putImageData(img, 0, 0);
+  ctx.putImageData(img,0,0);
 
-  // 感測器節點
-  const pad = 22;
-  const pos = { A:[pad,pad], B:[W-pad,pad], C:[pad,H-pad], D:[W-pad,H-pad] };
+  const pad=22;
+  const pos = {A:[pad,pad],B:[W-pad,pad],C:[pad,H-pad],D:[W-pad,H-pad]};
   Object.entries(pos).forEach(([k,[x,y]]) => {
-    ctx.beginPath();
-    ctx.arc(x, y, 11, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(10,12,16,0.85)';
-    ctx.fill();
-    ctx.strokeStyle = COLORS[k];
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = COLORS[k];
-    ctx.font = 'bold 11px Syne';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(k, x, y);
-    ctx.fillStyle = 'rgba(232,234,240,0.85)';
-    ctx.font = '9px DM Mono';
-    ctx.fillText(state[k].humidity.toFixed(1)+'%', x, y+17);
+    ctx.beginPath(); ctx.arc(x,y,11,0,Math.PI*2);
+    ctx.fillStyle='rgba(10,12,16,0.85)'; ctx.fill();
+    ctx.strokeStyle=COLORS[k]; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=COLORS[k]; ctx.font='bold 11px Syne';
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(k,x,y);
+    ctx.fillStyle='rgba(232,234,240,0.85)'; ctx.font='9px DM Mono';
+    ctx.fillText(state[k].humidity.toFixed(1)+'%',x,y+17);
   });
 
-  // 擴散方向箭頭
-  const gx = (state.B.humidity + state.D.humidity)/2 - (state.A.humidity + state.C.humidity)/2;
-  const gy = (state.C.humidity + state.D.humidity)/2 - (state.A.humidity + state.B.humidity)/2;
-  const mag = Math.sqrt(gx*gx + gy*gy);
-  if (mag > 0.5) {
-    const cx = W/2, cy = H/2, len = 36;
-    const nx = gx/mag, ny = gy/mag;
-    const ex = cx + nx*len, ey = cy + ny*len;
-    ctx.beginPath();
-    ctx.moveTo(cx - nx*len*0.5, cy - ny*len*0.5);
-    ctx.lineTo(ex, ey);
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    const a = Math.atan2(ny, nx);
-    ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex - 10*Math.cos(a-0.45), ey - 10*Math.sin(a-0.45));
-    ctx.lineTo(ex - 10*Math.cos(a+0.45), ey - 10*Math.sin(a+0.45));
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.fill();
-
-    // 方向文字
-    const dirs = [];
-    if (nx > 0.3) dirs.push('右'); else if (nx < -0.3) dirs.push('左');
-    if (ny > 0.3) dirs.push('下'); else if (ny < -0.3) dirs.push('上');
+  const gx=(state.B.humidity+state.D.humidity)/2-(state.A.humidity+state.C.humidity)/2;
+  const gy=(state.C.humidity+state.D.humidity)/2-(state.A.humidity+state.B.humidity)/2;
+  const mag=Math.sqrt(gx*gx+gy*gy);
+  if (mag>0.5) {
+    const cx=W/2,cy=H/2,len=36,nx=gx/mag,ny=gy/mag;
+    const ex=cx+nx*len,ey=cy+ny*len;
+    ctx.beginPath(); ctx.moveTo(cx-nx*len*0.5,cy-ny*len*0.5); ctx.lineTo(ex,ey);
+    ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=2; ctx.stroke();
+    const a=Math.atan2(ny,nx);
+    ctx.beginPath(); ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-10*Math.cos(a-0.45),ey-10*Math.sin(a-0.45));
+    ctx.lineTo(ex-10*Math.cos(a+0.45),ey-10*Math.sin(a+0.45));
+    ctx.closePath(); ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fill();
+    const dirs=[];
+    if (nx>0.3) dirs.push('右'); else if (nx<-0.3) dirs.push('左');
+    if (ny>0.3) dirs.push('下'); else if (ny<-0.3) dirs.push('上');
     document.getElementById('gradient-info').textContent =
       `↗ 濕氣擴散方向：${dirs.join('')}　梯度強度：${mag.toFixed(1)} %RH`;
   } else {
     document.getElementById('gradient-info').textContent = '≈ 濕度分佈均勻，無明顯擴散方向';
   }
 
-  // 圖例
-  const [cMin] = toColor(minH), [cMax] = toColor(maxH);
   document.getElementById('legend-bar').style.background =
     `linear-gradient(to right, rgb(${toColor(minH).join(',')}), rgb(${toColor(maxH).join(',')}))`;
-  document.getElementById('leg-min').textContent = minH.toFixed(0) + '%';
-  document.getElementById('leg-max').textContent = maxH.toFixed(0) + '%';
+  document.getElementById('leg-min').textContent = minH.toFixed(0)+'%';
+  document.getElementById('leg-max').textContent = maxH.toFixed(0)+'%';
 }
 
-// ── UI 更新 ──────────────────────────────────────────
 function updateCards() {
   ['A','B','C','D'].forEach(k => {
-    const s = state[k];
-    if (!s) return;
-    document.getElementById('h-'+k).textContent = s.humidity.toFixed(1) + '%';
-    document.getElementById('t-'+k).textContent = s.temperature.toFixed(1) + ' °C';
-    const prev = prevH[k];
+    const s = state[k]; if (!s) return;
+    document.getElementById('h-'+k).textContent = s.humidity.toFixed(1)+'%';
+    document.getElementById('t-'+k).textContent = s.temperature.toFixed(1)+' °C';
     const trendEl = document.getElementById('trend-'+k);
-    if (prev !== null) {
-      const diff = s.humidity - prev;
-      if (Math.abs(diff) < 0.1) { trendEl.textContent = '→'; trendEl.style.color = '#6b7280'; }
-      else if (diff > 0) { trendEl.textContent = '↑ +' + diff.toFixed(1); trendEl.style.color = '#f87171'; }
-      else { trendEl.textContent = '↓ ' + diff.toFixed(1); trendEl.style.color = '#34d399'; }
+    if (prevH[k] !== null) {
+      const diff = s.humidity - prevH[k];
+      if (Math.abs(diff)<0.1) { trendEl.textContent='→'; trendEl.style.color='#6b7280'; }
+      else if (diff>0)         { trendEl.textContent='↑ +'+diff.toFixed(1); trendEl.style.color='#f87171'; }
+      else                     { trendEl.textContent='↓ '+diff.toFixed(1);  trendEl.style.color='#34d399'; }
     }
     prevH[k] = s.humidity;
   });
@@ -528,8 +390,8 @@ function updateCards() {
 }
 
 function pushHistory(key, humidity) {
-  const now = new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-  if (!history.labels.includes(now) || history.labels[history.labels.length-1] !== now) {
+  const now = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if (history.labels[history.labels.length-1] !== now) {
     history.labels.push(now);
     if (history.labels.length > MAX_POINTS) history.labels.shift();
   }
@@ -538,12 +400,13 @@ function pushHistory(key, humidity) {
   lineChart.update('none');
 }
 
-// ── MQTT 連線 ─────────────────────────────────────────
 const pill = document.getElementById('status-pill');
 const statusText = document.getElementById('status-text');
 
 const client = mqtt.connect(BROKER_URL, {
-  clientId: 'dashboard-' + Math.random().toString(36).substr(2, 8),
+  clientId: 'web-' + Math.random().toString(36).substr(2,8),
+  username: MQTT_USER,
+  password: MQTT_PASS,
   clean: true,
   reconnectPeriod: 3000
 });
@@ -573,13 +436,11 @@ client.on('message', (topic, payload) => {
     updateCards();
     pushHistory(key, data.humidity);
     drawHeatmap();
-  } catch(e) {
-    console.warn('訊息解析失敗:', e);
-  }
+  } catch(e) { console.warn('訊息解析失敗:', e); }
 });
 
-// 初始繪製
 drawHeatmap();
 </script>
 </body>
 </html>
+
