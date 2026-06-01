@@ -3,444 +3,118 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>環境監控儀表板</title>
+<title>AtmoLink 微氣候展示儀表板</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.3.4/mqtt.min.js"></script>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg: #0a0c10;
-    --surface: #111318;
-    --surface2: #181c23;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(255,255,255,0.13);
-    --text: #e8eaf0;
-    --muted: #6b7280;
-    --A: #60a5fa;
-    --B: #34d399;
-    --C: #f87171;
-    --D: #fbbf24;
-  }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    min-height: 100vh;
-    padding: 2rem;
-  }
-
-  header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-
-  .title-block h1 {
-    font-size: 1.6rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
-  .title-block p {
-    font-size: 0.8rem;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    margin-top: 4px;
-  }
-
-  .status-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 99px;
-    border: 1px solid var(--border2);
-    background: var(--surface);
-    font-size: 0.75rem;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-    transition: all 0.3s;
-  }
-
-  .status-pill.connected { border-color: rgba(52,211,153,0.4); color: #34d399; }
-  .status-pill.error     { border-color: rgba(248,113,113,0.4); color: #f87171; }
-
-  .dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--muted);
-    transition: background 0.3s;
-  }
-  .connected .dot { background: #34d399; box-shadow: 0 0 6px #34d399; animation: pulse 2s infinite; }
-  .error .dot     { background: #f87171; }
-
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 1.5rem;
-  }
-  @media (max-width: 700px) { .cards { grid-template-columns: repeat(2,1fr); } }
-
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.1rem 1.2rem;
-    position: relative;
-    overflow: hidden;
-  }
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    border-radius: 12px 12px 0 0;
-  }
-  .card-A::before { background: var(--A); }
-  .card-B::before { background: var(--B); }
-  .card-C::before { background: var(--C); }
-  .card-D::before { background: var(--D); }
-
-  .card-label {
-    font-size: 0.7rem;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .sensor-dot { width: 8px; height: 8px; border-radius: 50%; }
-
-  .card-humidity {
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-  .card-temp  { font-size: 0.8rem; font-family: 'DM Mono', monospace; color: var(--muted); }
-  .card-trend { position: absolute; top: 1rem; right: 1rem; font-size: 0.7rem; font-family: 'DM Mono', monospace; }
-
-  .main-grid {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 1.5rem;
-    align-items: start;
-  }
-  @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } }
-
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.2rem;
-  }
-  .panel-title {
-    font-size: 0.7rem;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 1rem;
-  }
-
-  canvas#heatmap { width: 100%; border-radius: 8px; display: block; }
-
-  .legend { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-  .legend-bar { flex: 1; height: 6px; border-radius: 3px; }
-  .legend-label { font-size: 0.7rem; font-family: 'DM Mono', monospace; color: var(--muted); min-width: 28px; }
-
-  .chart-wrap { position: relative; height: 260px; }
-
-  .chart-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
-  .chart-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; font-family: 'DM Mono', monospace; color: var(--muted); }
-  .legend-line { width: 16px; height: 2px; border-radius: 1px; }
-
-  .gradient-info {
-    margin-top: 10px;
-    padding: 8px 12px;
-    background: var(--surface2);
-    border-radius: 8px;
-    font-size: 0.72rem;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-  }
-
-  footer {
-    margin-top: 2rem;
-    font-size: 0.7rem;
-    font-family: 'DM Mono', monospace;
-    color: var(--muted);
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-    border-top: 1px solid var(--border);
-    padding-top: 1rem;
-  }
-
-  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-  .fade-in { animation: fadeIn 0.5s ease forwards; }
-</style>
 </head>
 <body>
-
 <header>
-  <div class="title-block">
-    <h1>環境監控儀表板</h1>
-    <p>AHT30 × Raspberry Pi Pico W × MQTT</p>
+  <div>
+    <h1>AtmoLink 微氣候展示儀表板</h1>
+    <p class="subtitle">AHT30 x Raspberry Pi Pico W x MQTT x GitHub Pages</p>
   </div>
-  <div class="status-pill" id="status-pill">
-    <span class="dot"></span>
-    <span id="status-text">連線中...</span>
+  <div class="top-actions">
+    <div class="status-pill" id="status-pill"><span class="dot"></span><span id="status-text">連線中...</span></div>
+    <div class="mode-pill" id="data-mode">資料源：等待中</div>
+    <button id="mqtt-settings" type="button">設定 MQTT</button>
+    <button id="sim-toggle" type="button">啟用模擬</button>
   </div>
 </header>
 
-<div class="cards">
-  <div class="card card-A fade-in" style="animation-delay:0s">
-    <div class="card-label"><span class="sensor-dot" style="background:var(--A)"></span>感測器 A — 左上</div>
-    <div class="card-humidity" id="h-A" style="color:var(--A)">—</div>
-    <div class="card-temp" id="t-A">— °C</div>
-    <div class="card-trend" id="trend-A" style="color:var(--muted)">—</div>
-  </div>
-  <div class="card card-B fade-in" style="animation-delay:0.08s">
-    <div class="card-label"><span class="sensor-dot" style="background:var(--B)"></span>感測器 B — 右上</div>
-    <div class="card-humidity" id="h-B" style="color:var(--B)">—</div>
-    <div class="card-temp" id="t-B">— °C</div>
-    <div class="card-trend" id="trend-B" style="color:var(--muted)">—</div>
-  </div>
-  <div class="card card-C fade-in" style="animation-delay:0.16s">
-    <div class="card-label"><span class="sensor-dot" style="background:var(--C)"></span>感測器 C — 左下</div>
-    <div class="card-humidity" id="h-C" style="color:var(--C)">—</div>
-    <div class="card-temp" id="t-C">— °C</div>
-    <div class="card-trend" id="trend-C" style="color:var(--muted)">—</div>
-  </div>
-  <div class="card card-D fade-in" style="animation-delay:0.24s">
-    <div class="card-label"><span class="sensor-dot" style="background:var(--D)"></span>感測器 D — 右下</div>
-    <div class="card-humidity" id="h-D" style="color:var(--D)">—</div>
-    <div class="card-temp" id="t-D">— °C</div>
-    <div class="card-trend" id="trend-D" style="color:var(--muted)">—</div>
-  </div>
-</div>
+<nav class="tabs" aria-label="展示模式">
+  <button class="tab active" type="button" data-target="stratification">垂直熱分層</button>
+  <button class="tab" type="button" data-target="heatmap-view">2D 微氣候熱力圖</button>
+  <button class="tab" type="button" data-target="network-view">容錯網路</button>
+</nav>
 
-<div class="main-grid">
-  <div>
-    <div class="panel fade-in" style="animation-delay:0.32s">
-      <div class="panel-title">濕度空間分佈</div>
-      <canvas id="heatmap" width="256" height="256"></canvas>
-      <div class="legend">
-        <span class="legend-label" id="leg-min">—</span>
-        <div class="legend-bar" id="legend-bar"></div>
-        <span class="legend-label" style="text-align:right" id="leg-max">—</span>
-      </div>
-      <div class="gradient-info" id="gradient-info">↗ 擴散方向計算中...</div>
-    </div>
-  </div>
+<section class="cards" id="sensor-cards"></section>
 
-  <div>
-    <div class="panel fade-in" style="animation-delay:0.4s">
-      <div class="panel-title">濕度時間序列</div>
-      <div class="chart-wrap">
-        <canvas id="lineChart" role="img" aria-label="四個感測器的即時濕度折線圖">四角落濕度隨時間變化</canvas>
+<main>
+  <section class="scenario active" id="stratification">
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Vertical Thermal Stratification</div>
+        <div class="tower" id="tower"></div>
       </div>
-      <div class="chart-legend">
-        <div class="chart-legend-item"><div class="legend-line" style="background:var(--A)"></div>A 左上</div>
-        <div class="chart-legend-item"><div class="legend-line" style="background:var(--B)"></div>B 右上</div>
-        <div class="chart-legend-item"><div class="legend-line" style="background:var(--C)"></div>C 左下</div>
-        <div class="chart-legend-item"><div class="legend-line" style="background:var(--D)"></div>D 右下</div>
+      <div class="panel">
+        <div class="panel-title">溫度時間序列與舒適度</div>
+        <div class="grid-3 metric-row">
+          <div class="metric" id="delta-metric"><span>0.1m - 1.1m 頭腳溫差</span><strong>-- °C</strong></div>
+          <div class="metric" id="gradient-metric"><span>垂直梯度</span><strong>-- °C/m</strong></div>
+          <div class="metric comfort" id="comfort-metric"><span>簡化 PPD / 狀態</span><strong>--</strong></div>
+        </div>
+        <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
       </div>
     </div>
-  </div>
-</div>
+  </section>
+
+  <section class="scenario" id="heatmap-view">
+    <div class="heatmap-layout">
+      <div class="panel">
+        <div class="panel-title">IDW Spatial Interpolation</div>
+        <div class="heatmap-toolbar">
+          <div class="segmented" aria-label="熱力圖資料類型">
+            <button class="active" type="button" data-field="humidity">濕度</button>
+            <button type="button" data-field="temperature">溫度</button>
+          </div>
+          <button id="door-toggle" type="button">門狀態：開</button>
+        </div>
+        <canvas id="heatmap" width="320" height="320"></canvas>
+        <div class="legend">
+          <span class="legend-label" id="leg-min">--</span>
+          <div class="legend-bar" id="legend-bar"></div>
+          <span class="legend-label legend-label-right" id="leg-max">--</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">展示解讀</div>
+        <div class="info-box" id="gradient-info">等待四個節點資料以生成熱力圖。</div>
+        <div class="grid-3 heatmap-metrics">
+          <div class="metric"><span>熱源/濕源位置</span><strong id="hotspot-label">--</strong></div>
+          <div class="metric"><span>IDW 權重次方</span><strong>p = 2</strong></div>
+          <div class="metric"><span>隔板/門扉</span><strong id="door-label">開啟</strong></div>
+        </div>
+        <div class="info-box heatmap-note">
+          此版本在前端即時計算 IDW，並用門扉狀態調整隔板穿透權重。完整 BFS 繞牆可以在下一階段移到 Python 後端或 Pico AP 本地服務。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scenario" id="network-view">
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Infrastructure-less Fault Tolerance View</div>
+        <div class="topology" id="topology"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">節點健康狀態</div>
+        <div class="grid-3 metric-row">
+          <div class="metric"><span>在線節點</span><strong id="online-count">0 / 4</strong></div>
+          <div class="metric"><span>平均資料年齡</span><strong id="avg-age">-- s</strong></div>
+          <div class="metric"><span>容錯狀態</span><strong id="fault-state">等待資料</strong></div>
+        </div>
+        <div class="event-log" id="event-log"></div>
+      </div>
+    </div>
+  </section>
+</main>
 
 <footer>
-  <span>2aff883c85d24676a738e310f0dbc71d.s1.eu.hivemq.cloud · room/sensor/#</span>
-  <span id="last-update">最後更新：—</span>
+  <span>wss://2aff883c85d24676a738e310f0dbc71d.s1.eu.hivemq.cloud:8884/mqtt · room/sensor/#</span>
+  <span id="last-update">最後更新：--</span>
 </footer>
 
-<script>
-const BROKER_URL = 'wss://2aff883c85d24676a738e310f0dbc71d.s1.eu.hivemq.cloud:8884/mqtt';
-const MQTT_USER  = 'Web_client';
-const MQTT_PASS  = 'Atomlink0517';
-const TOPICS = { A:'room/sensor/A', B:'room/sensor/B', C:'room/sensor/C', D:'room/sensor/D' };
-const MAX_POINTS = 40;
-const COLORS = { A:'#60a5fa', B:'#34d399', C:'#f87171', D:'#fbbf24' };
-
-const state  = { A:null, B:null, C:null, D:null };
-const prevH  = { A:null, B:null, C:null, D:null };
-const history = { A:[], B:[], C:[], D:[], labels:[] };
-
-const lineChart = new Chart(document.getElementById('lineChart'), {
-  type: 'line',
-  data: {
-    labels: history.labels,
-    datasets: ['A','B','C','D'].map(k => ({
-      label: k, data: history[k],
-      borderColor: COLORS[k], backgroundColor: 'transparent',
-      tension: 0.4, pointRadius: 0, borderWidth: 2
-    }))
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    animation: { duration: 300 },
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { ticks: { maxTicksLimit: 6, font:{ size:11, family:'DM Mono' }, color:'#6b7280' }, grid:{ color:'rgba(255,255,255,0.04)' } },
-      y: { min:20, max:100, ticks:{ font:{ size:11, family:'DM Mono' }, color:'#6b7280', callback: v => v+'%' }, grid:{ color:'rgba(255,255,255,0.04)' } }
-    }
-  }
-});
-
-function drawHeatmap() {
-  const canvas = document.getElementById('heatmap');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const vals = ['A','B','C','D'].map(k => state[k]?.humidity).filter(v => v != null);
-  if (vals.length < 4) {
-    ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = '#181c23'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#6b7280'; ctx.font = '13px DM Mono';
-    ctx.textAlign = 'center'; ctx.fillText('等待感測器資料...', W/2, H/2);
-    return;
-  }
-  const minH = Math.min(...vals)-3, maxH = Math.max(...vals)+3;
-  const toColor = h => {
-    const t = Math.max(0, Math.min(1, (h-minH)/(maxH-minH)));
-    return [Math.round(20+t*220), Math.round(80+t*60), Math.round(220-t*180)];
-  };
-  const corners = [
-    {x:0,y:0,h:state.A.humidity}, {x:W,y:0,h:state.B.humidity},
-    {x:0,y:H,h:state.C.humidity}, {x:W,y:H,h:state.D.humidity}
-  ];
-  const img = ctx.createImageData(W,H);
-  for (let py=0;py<H;py++) for (let px=0;px<W;px++) {
-    let wSum=0,hSum=0;
-    corners.forEach(c => { const d=Math.sqrt((px-c.x)**2+(py-c.y)**2)+0.001; const w=1/(d*d); wSum+=w; hSum+=w*c.h; });
-    const [r,g,b] = toColor(hSum/wSum);
-    const i=(py*W+px)*4; img.data[i]=r; img.data[i+1]=g; img.data[i+2]=b; img.data[i+3]=220;
-  }
-  ctx.putImageData(img,0,0);
-
-  const pad=22;
-  const pos = {A:[pad,pad],B:[W-pad,pad],C:[pad,H-pad],D:[W-pad,H-pad]};
-  Object.entries(pos).forEach(([k,[x,y]]) => {
-    ctx.beginPath(); ctx.arc(x,y,11,0,Math.PI*2);
-    ctx.fillStyle='rgba(10,12,16,0.85)'; ctx.fill();
-    ctx.strokeStyle=COLORS[k]; ctx.lineWidth=2; ctx.stroke();
-    ctx.fillStyle=COLORS[k]; ctx.font='bold 11px Syne';
-    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(k,x,y);
-    ctx.fillStyle='rgba(232,234,240,0.85)'; ctx.font='9px DM Mono';
-    ctx.fillText(state[k].humidity.toFixed(1)+'%',x,y+17);
-  });
-
-  const gx=(state.B.humidity+state.D.humidity)/2-(state.A.humidity+state.C.humidity)/2;
-  const gy=(state.C.humidity+state.D.humidity)/2-(state.A.humidity+state.B.humidity)/2;
-  const mag=Math.sqrt(gx*gx+gy*gy);
-  if (mag>0.5) {
-    const cx=W/2,cy=H/2,len=36,nx=gx/mag,ny=gy/mag;
-    const ex=cx+nx*len,ey=cy+ny*len;
-    ctx.beginPath(); ctx.moveTo(cx-nx*len*0.5,cy-ny*len*0.5); ctx.lineTo(ex,ey);
-    ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=2; ctx.stroke();
-    const a=Math.atan2(ny,nx);
-    ctx.beginPath(); ctx.moveTo(ex,ey);
-    ctx.lineTo(ex-10*Math.cos(a-0.45),ey-10*Math.sin(a-0.45));
-    ctx.lineTo(ex-10*Math.cos(a+0.45),ey-10*Math.sin(a+0.45));
-    ctx.closePath(); ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fill();
-    const dirs=[];
-    if (nx>0.3) dirs.push('右'); else if (nx<-0.3) dirs.push('左');
-    if (ny>0.3) dirs.push('下'); else if (ny<-0.3) dirs.push('上');
-    document.getElementById('gradient-info').textContent =
-      `↗ 濕氣擴散方向：${dirs.join('')}　梯度強度：${mag.toFixed(1)} %RH`;
-  } else {
-    document.getElementById('gradient-info').textContent = '≈ 濕度分佈均勻，無明顯擴散方向';
-  }
-
-  document.getElementById('legend-bar').style.background =
-    `linear-gradient(to right, rgb(${toColor(minH).join(',')}), rgb(${toColor(maxH).join(',')}))`;
-  document.getElementById('leg-min').textContent = minH.toFixed(0)+'%';
-  document.getElementById('leg-max').textContent = maxH.toFixed(0)+'%';
-}
-
-function updateCards() {
-  ['A','B','C','D'].forEach(k => {
-    const s = state[k]; if (!s) return;
-    document.getElementById('h-'+k).textContent = s.humidity.toFixed(1)+'%';
-    document.getElementById('t-'+k).textContent = s.temperature.toFixed(1)+' °C';
-    const trendEl = document.getElementById('trend-'+k);
-    if (prevH[k] !== null) {
-      const diff = s.humidity - prevH[k];
-      if (Math.abs(diff)<0.1) { trendEl.textContent='→'; trendEl.style.color='#6b7280'; }
-      else if (diff>0)         { trendEl.textContent='↑ +'+diff.toFixed(1); trendEl.style.color='#f87171'; }
-      else                     { trendEl.textContent='↓ '+diff.toFixed(1);  trendEl.style.color='#34d399'; }
-    }
-    prevH[k] = s.humidity;
-  });
-  document.getElementById('last-update').textContent =
-    '最後更新：' + new Date().toLocaleTimeString('zh-TW');
-}
-
-function pushHistory(key, humidity) {
-  const now = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  if (history.labels[history.labels.length-1] !== now) {
-    history.labels.push(now);
-    if (history.labels.length > MAX_POINTS) history.labels.shift();
-  }
-  history[key].push(parseFloat(humidity.toFixed(1)));
-  if (history[key].length > MAX_POINTS) history[key].shift();
-  lineChart.update('none');
-}
-
-const pill = document.getElementById('status-pill');
-const statusText = document.getElementById('status-text');
-
-const client = mqtt.connect(BROKER_URL, {
-  clientId: 'web-' + Math.random().toString(36).substr(2,8),
-  username: MQTT_USER,
-  password: MQTT_PASS,
-  clean: true,
-  reconnectPeriod: 3000
-});
-
-client.on('connect', () => {
-  pill.className = 'status-pill connected';
-  statusText.textContent = '已連線';
-  Object.values(TOPICS).forEach(t => client.subscribe(t));
-});
-
-client.on('error', () => {
-  pill.className = 'status-pill error';
-  statusText.textContent = '連線失敗';
-});
-
-client.on('reconnect', () => {
-  pill.className = 'status-pill';
-  statusText.textContent = '重新連線中...';
-});
-
-client.on('message', (topic, payload) => {
-  try {
-    const data = JSON.parse(payload.toString());
-    const key = Object.keys(TOPICS).find(k => TOPICS[k] === topic);
-    if (!key) return;
-    state[key] = { humidity: data.humidity, temperature: data.temperature };
-    updateCards();
-    pushHistory(key, data.humidity);
-    drawHeatmap();
-  } catch(e) { console.warn('訊息解析失敗:', e); }
-});
-
-drawHeatmap();
-</script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/state.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/views/sensors.js"></script>
+<script src="assets/js/views/stratification.js"></script>
+<script src="assets/js/views/heatmap.js"></script>
+<script src="assets/js/views/network.js"></script>
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
 </body>
 </html>
-
