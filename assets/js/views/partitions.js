@@ -7,15 +7,22 @@
     return document.getElementById('heatmap-stage');
   }
 
-  function modelSize() {
-    return AtmoLink.config.heatmapSize;
+  function modelWidth() {
+    return AtmoLink.config.heatmapWidth;
   }
 
-  // 取得「顯示像素 -> 模型座標(0~320)」的縮放比例。
+  function modelHeight() {
+    return AtmoLink.config.heatmapHeight;
+  }
+
+  // 取得「顯示像素 -> 模型座標」的縮放比例。
   function scaleFactor() {
     const stage = getStage();
     const rect = stage.getBoundingClientRect();
-    return modelSize() / (rect.width || modelSize());
+    return {
+      x: modelWidth() / (rect.width || modelWidth()),
+      y: modelHeight() / (rect.height || modelHeight())
+    };
   }
 
   function clamp(value, min, max) {
@@ -33,11 +40,10 @@
   }
 
   function applyGeometry(el, p) {
-    const size = modelSize();
-    el.style.left = `${(p.x / size) * 100}%`;
-    el.style.top = `${(p.y / size) * 100}%`;
-    el.style.width = `${(p.w / size) * 100}%`;
-    el.style.height = `${(p.h / size) * 100}%`;
+    el.style.left = `${(p.x / modelWidth()) * 100}%`;
+    el.style.top = `${(p.y / modelHeight()) * 100}%`;
+    el.style.width = `${(p.w / modelWidth()) * 100}%`;
+    el.style.height = `${(p.h / modelHeight()) * 100}%`;
   }
 
   function startDrag(event, partition, el, mode) {
@@ -51,17 +57,18 @@
     const startX = event.clientX;
     const startY = event.clientY;
     const orig = { x: partition.x, y: partition.y, w: partition.w, h: partition.h };
-    const size = modelSize();
+    const width = modelWidth();
+    const height = modelHeight();
 
     function onMove(moveEvent) {
-      const dx = (moveEvent.clientX - startX) * scale;
-      const dy = (moveEvent.clientY - startY) * scale;
+      const dx = (moveEvent.clientX - startX) * scale.x;
+      const dy = (moveEvent.clientY - startY) * scale.y;
       if (mode === 'move') {
-        partition.x = clamp(orig.x + dx, 0, size - partition.w);
-        partition.y = clamp(orig.y + dy, 0, size - partition.h);
+        partition.x = clamp(orig.x + dx, 0, width - partition.w);
+        partition.y = clamp(orig.y + dy, 0, height - partition.h);
       } else {
-        partition.w = clamp(orig.w + dx, MIN_SIZE, size - partition.x);
-        partition.h = clamp(orig.h + dy, MIN_SIZE, size - partition.y);
+        partition.w = clamp(orig.w + dx, MIN_SIZE, width - partition.x);
+        partition.h = clamp(orig.h + dy, MIN_SIZE, height - partition.y);
       }
       applyGeometry(liveEl, partition);
       markDirtyAndRedraw();
@@ -85,9 +92,13 @@
 
     const label = document.createElement('span');
     label.className = 'partition-label';
-    label.textContent = partition.type === 'door'
-      ? (AtmoLink.state.doorOpen ? '門·開' : '門·關')
-      : '隔板';
+    const labels = {
+      shelf: '層板',
+      equipment: '設備',
+      wall: '層板',
+      door: AtmoLink.state.doorOpen ? '門·開' : '門·關'
+    };
+    label.textContent = labels[partition.type] || '障礙';
     el.appendChild(label);
 
     const remove = document.createElement('button');
@@ -124,11 +135,10 @@
   };
 
   function addPartition(type) {
-    const size = modelSize();
     const id = `${type}-${Date.now().toString(36)}`;
-    const partition = type === 'door'
-      ? { id, type: 'door', x: size / 2 - 6, y: size * 0.18, w: 12, h: size * 0.3 }
-      : { id, type: 'wall', x: size * 0.35, y: size / 2 - 6, w: size * 0.3, h: 12 };
+    const partition = type === 'equipment'
+      ? { id, type: 'equipment', x: 42, y: modelHeight() * 0.42, w: modelWidth() - 84, h: 38 }
+      : { id, type: 'shelf', x: 34, y: modelHeight() * 0.52, w: modelWidth() - 68, h: 10 };
     AtmoLink.state.partitions.push(partition);
     AtmoLink.state.selectedPartitionId = id;
     AtmoLink.renderPartitionLayer();
@@ -136,8 +146,8 @@
   }
 
   AtmoLink.bindPartitionControls = function bindPartitionControls() {
-    document.getElementById('add-wall').addEventListener('click', () => addPartition('wall'));
-    document.getElementById('add-door').addEventListener('click', () => addPartition('door'));
+    document.getElementById('add-shelf').addEventListener('click', () => addPartition('shelf'));
+    document.getElementById('add-equipment').addEventListener('click', () => addPartition('equipment'));
     document.getElementById('reset-layout').addEventListener('click', () => {
       AtmoLink.state.partitions = AtmoLink.config.defaultPartitions();
       AtmoLink.state.selectedPartitionId = null;

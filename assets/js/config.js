@@ -25,18 +25,21 @@
     heightMin: 0,
     heightMax: 3.0,
     positions: {
-      A: [34, 34],
-      B: [286, 34],
-      C: [34, 286],
-      D: [286, 286]
+      A: [86, 70],
+      B: [234, 185],
+      C: [86, 355],
+      D: [234, 505]
     },
+    heatmapWidth: 320,
+    heatmapHeight: 560,
     heatmapSize: 320,
-    gridResolution: 72,
+    gridResolution: 92,
     idwPower: 2,
     defaultPartitions: function defaultPartitions() {
       return [
-        { id: 'door-1', type: 'door', x: 154, y: 30, w: 12, h: 118 },
-        { id: 'wall-1', type: 'wall', x: 154, y: 172, w: 12, h: 118 }
+        { id: 'equipment-1', type: 'equipment', x: 42, y: 138, w: 236, h: 34 },
+        { id: 'shelf-1', type: 'shelf', x: 34, y: 288, w: 252, h: 10 },
+        { id: 'equipment-2', type: 'equipment', x: 42, y: 418, w: 236, h: 42 }
       ];
     },
     maxPoints: 50,

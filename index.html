@@ -25,8 +25,8 @@
 
 <nav class="tabs" aria-label="展示模式">
   <button class="tab active" type="button" data-target="stratification">垂直熱分層</button>
-  <button class="tab" type="button" data-target="heatmap-view">2D 微氣候熱力圖</button>
-  <button class="tab" type="button" data-target="network-view">容錯網路</button>
+  <button class="tab" type="button" data-target="heatmap-view">垂直機櫃熱力圖</button>
+  <button class="tab" type="button" data-target="network-view">節點狀態監控</button>
 </nav>
 
 <section class="cards" id="sensor-cards"></section>
@@ -57,23 +57,24 @@
   <section class="scenario" id="heatmap-view">
     <div class="heatmap-layout">
       <div class="panel">
-        <div class="panel-title">IDW Spatial Interpolation</div>
+        <div class="panel-title">Rack Microclimate Section</div>
         <div class="heatmap-toolbar">
           <div class="segmented" aria-label="熱力圖資料類型">
             <button class="active" type="button" data-field="humidity">濕度</button>
             <button type="button" data-field="temperature">溫度</button>
           </div>
-          <button id="door-toggle" type="button">門狀態：開</button>
+          <button id="heat-mode-toggle" type="button">擴散：熱浮力</button>
         </div>
         <div class="heatmap-stage" id="heatmap-stage">
-          <canvas id="heatmap" width="320" height="320"></canvas>
+          <canvas id="heatmap" width="320" height="560"></canvas>
           <div class="partition-layer" id="partition-layer"></div>
         </div>
         <div class="partition-tools">
-          <button id="add-wall" type="button">+ 隔板</button>
-          <button id="add-door" type="button">+ 門</button>
-          <button id="reset-layout" type="button">重設格局</button>
-          <span class="partition-hint">拖曳移動 · 右下角縮放 · ✕ 刪除</span>
+          <button id="add-shelf" type="button">+ 層板</button>
+          <button id="add-equipment" type="button">+ 設備</button>
+          <button id="reset-layout" type="button">重設機櫃</button>
+          <button id="reset-nodes" type="button">重設節點</button>
+          <span class="partition-hint">拖曳節點/設備 · 右下角縮放 · ✕ 刪除</span>
         </div>
         <div class="legend">
           <span class="legend-label" id="leg-min">--</span>
@@ -82,15 +83,18 @@
         </div>
       </div>
       <div class="panel">
-        <div class="panel-title">展示解讀</div>
-        <div class="info-box" id="gradient-info">等待四個節點資料以生成熱力圖。</div>
-        <div class="grid-3 heatmap-metrics">
-          <div class="metric"><span>熱源/濕源位置</span><strong id="hotspot-label">--</strong></div>
-          <div class="metric"><span>IDW 權重次方</span><strong>p = 2</strong></div>
-          <div class="metric"><span>隔板/門扉</span><strong id="door-label">開啟</strong></div>
+        <div class="panel-title">機櫃剖面判讀</div>
+        <div class="info-box rack-summary" id="rack-summary">等待四個節點資料以生成熱力圖。</div>
+        <div class="grid-2 rack-metrics">
+          <div class="metric"><span>最高讀值節點</span><strong id="hotspot-label">--</strong></div>
+          <div class="metric"><span>上層 - 下層</span><strong id="vertical-delta-label">--</strong></div>
+          <div class="metric"><span>後側 - 前側</span><strong id="front-back-label">--</strong></div>
+          <div class="metric"><span>節點所在層位</span><strong id="node-layer-label">--</strong></div>
+          <div class="metric"><span>層板 / 設備</span><strong id="layout-count-label">--</strong></div>
+          <div class="metric"><span>擴散 / IDW</span><strong id="diffusion-label">熱浮力 · p2</strong></div>
         </div>
         <div class="info-box heatmap-note">
-          前端以 Dijkstra（8 連通）即時計算每個網格點繞過隔板到四個感測器的最短測地線距離，再做反距離權重內插（p = 2）。可直接拖曳、縮放或新增隔板與門，調整機箱內部格局；關門時視距被切斷，熱力邊界會精準停在門前。
+          左右方向代表機櫃前後：左側為前門進風面，右側為後門排熱面；上下方向代表 U 位高度。可拖曳節點、層板與設備來對應現場擺放，系統會即時計算繞行障礙物後的 Dijkstra + IDW 熱力分布。
         </div>
       </div>
     </div>
@@ -99,7 +103,7 @@
   <section class="scenario" id="network-view">
     <div class="grid-2">
       <div class="panel">
-        <div class="panel-title">Infrastructure-less Fault Tolerance View</div>
+        <div class="panel-title">Node Health Monitor</div>
         <div class="topology" id="topology"></div>
       </div>
       <div class="panel">
@@ -107,7 +111,7 @@
         <div class="grid-3 metric-row">
           <div class="metric"><span>在線節點</span><strong id="online-count">0 / 4</strong></div>
           <div class="metric"><span>平均資料年齡</span><strong id="avg-age">-- s</strong></div>
-          <div class="metric"><span>容錯狀態</span><strong id="fault-state">等待資料</strong></div>
+          <div class="metric"><span>系統狀態</span><strong id="fault-state">等待資料</strong></div>
         </div>
         <div class="event-log" id="event-log"></div>
       </div>

@@ -10,20 +10,20 @@
     return Math.max(min, Math.min(max, value));
   }
 
-  // 將隔板/關閉的門光柵化為阻擋格點。
+  // 將層板、設備與關閉的門光柵化為阻擋格點。
   function rasterizeWalls(grid, partitions, doorOpen) {
-    const { resolution, cell } = grid;
-    const blocked = new Uint8Array(resolution * resolution);
+    const { cols, rows, cellX, cellY } = grid;
+    const blocked = new Uint8Array(cols * rows);
     partitions.forEach((p) => {
-      const isBlocking = p.type === 'wall' || (p.type === 'door' && !doorOpen);
+      const isBlocking = p.type === 'shelf' || p.type === 'equipment' || p.type === 'wall' || (p.type === 'door' && !doorOpen);
       if (!isBlocking) return;
-      const gx0 = Math.floor(p.x / cell);
-      const gx1 = Math.ceil((p.x + p.w) / cell);
-      const gy0 = Math.floor(p.y / cell);
-      const gy1 = Math.ceil((p.y + p.h) / cell);
-      for (let gy = Math.max(0, gy0); gy < Math.min(resolution, gy1); gy += 1) {
-        for (let gx = Math.max(0, gx0); gx < Math.min(resolution, gx1); gx += 1) {
-          blocked[gy * resolution + gx] = 1;
+      const gx0 = Math.floor(p.x / cellX);
+      const gx1 = Math.ceil((p.x + p.w) / cellX);
+      const gy0 = Math.floor(p.y / cellY);
+      const gy1 = Math.ceil((p.y + p.h) / cellY);
+      for (let gy = Math.max(0, gy0); gy < Math.min(rows, gy1); gy += 1) {
+        for (let gx = Math.max(0, gx0); gx < Math.min(cols, gx1); gx += 1) {
+          blocked[gy * cols + gx] = 1;
         }
       }
     });
@@ -31,8 +31,8 @@
   }
 
   // 感測器落在牆內時，往外找最近的可通行格點當作起點。
-  function nearestFreeCell(blocked, resolution, gx, gy) {
-    const start = gy * resolution + gx;
+  function nearestFreeCell(blocked, cols, rows, gx, gy) {
+    const start = gy * cols + gx;
     if (!blocked[start]) return [gx, gy];
     const queue = [[gx, gy]];
     const seen = new Set([start]);
@@ -41,8 +41,8 @@
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx;
         const ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= resolution || ny >= resolution) continue;
-        const ni = ny * resolution + nx;
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+        const ni = ny * cols + nx;
         if (seen.has(ni)) continue;
         seen.add(ni);
         if (!blocked[ni]) return [nx, ny];
@@ -53,8 +53,9 @@
   }
 
   // 單源 Dijkstra：計算繞過牆壁的最短測地線距離場。
-  function geodesicField(blocked, resolution, srcX, srcY) {
-    const total = resolution * resolution;
+  function geodesicField(blocked, grid, srcX, srcY, diffusionMode) {
+    const { cols, rows, cellX, cellY } = grid;
+    const total = cols * rows;
     const dist = new Float32Array(total).fill(Infinity);
     const heapIdx = new Int32Array(total + 1);
     const heapDist = new Float32Array(total + 1);
@@ -93,24 +94,30 @@
       return topIdx;
     }
 
-    const startIdx = srcY * resolution + srcX;
+    const startIdx = srcY * cols + srcX;
     dist[startIdx] = 0;
     push(0, startIdx);
 
     while (heapSize > 0) {
       const i = pop();
       const d = dist[i];
-      const gx = i % resolution;
-      const gy = (i / resolution) | 0;
+      const gx = i % cols;
+      const gy = (i / cols) | 0;
       for (const [dx, dy, w] of NEIGHBORS) {
         const nx = gx + dx;
         const ny = gy + dy;
-        if (nx < 0 || ny < 0 || nx >= resolution || ny >= resolution) continue;
-        const ni = ny * resolution + nx;
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+        const ni = ny * cols + nx;
         if (blocked[ni]) continue;
         // 不允許從牆角的對角縫隙穿過。
-        if (dx !== 0 && dy !== 0 && blocked[gy * resolution + nx] && blocked[ny * resolution + gx]) continue;
-        const nd = d + w;
+        if (dx !== 0 && dy !== 0 && blocked[gy * cols + nx] && blocked[ny * cols + gx]) continue;
+        const physicalStep = Math.sqrt((dx * cellX) ** 2 + (dy * cellY) ** 2);
+        let directionPenalty = 1;
+        if (diffusionMode === 'buoyancy') {
+          if (dy < 0) directionPenalty = 0.78;
+          else if (dy > 0) directionPenalty = 1.48;
+        }
+        const nd = d + physicalStep * directionPenalty;
         if (nd < dist[ni]) {
           dist[ni] = nd;
           push(nd, ni);
@@ -121,21 +128,21 @@
   }
 
   // 把 NaN（牆內/不可達）格點以鄰居平均逐步填補，避免邊緣破洞。
-  function dilateField(values, resolution, passes) {
+  function dilateField(values, cols, rows, passes) {
     for (let p = 0; p < passes; p += 1) {
       const copy = values.slice();
       let changed = false;
       for (let i = 0; i < values.length; i += 1) {
         if (!Number.isNaN(values[i])) continue;
-        const gx = i % resolution;
-        const gy = (i / resolution) | 0;
+        const gx = i % cols;
+        const gy = (i / cols) | 0;
         let sum = 0;
         let count = 0;
         for (const [dx, dy] of NEIGHBORS) {
           const nx = gx + dx;
           const ny = gy + dy;
-          if (nx < 0 || ny < 0 || nx >= resolution || ny >= resolution) continue;
-          const v = values[ny * resolution + nx];
+          if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+          const v = values[ny * cols + nx];
           if (!Number.isNaN(v)) { sum += v; count += 1; }
         }
         if (count > 0) { copy[i] = sum / count; changed = true; }
@@ -145,11 +152,11 @@
     }
   }
 
-  function sampleField(values, resolution, fx, fy) {
-    const x0 = clamp(Math.floor(fx), 0, resolution - 1);
-    const y0 = clamp(Math.floor(fy), 0, resolution - 1);
-    const x1 = Math.min(x0 + 1, resolution - 1);
-    const y1 = Math.min(y0 + 1, resolution - 1);
+  function sampleField(values, cols, rows, fx, fy) {
+    const x0 = clamp(Math.floor(fx), 0, cols - 1);
+    const y0 = clamp(Math.floor(fy), 0, rows - 1);
+    const x1 = Math.min(x0 + 1, cols - 1);
+    const y1 = Math.min(y0 + 1, rows - 1);
     const tx = clamp(fx - x0, 0, 1);
     const ty = clamp(fy - y0, 0, 1);
     const corners = [
@@ -161,29 +168,81 @@
     let sum = 0;
     let weight = 0;
     for (const [xx, yy, ww] of corners) {
-      const v = values[yy * resolution + xx];
+      const v = values[yy * cols + xx];
       if (!Number.isNaN(v)) { sum += v * ww; weight += ww; }
     }
     return weight > 0 ? sum / weight : NaN;
   }
 
-  // 只在格局（隔板/門）改變時重算測地線距離場並快取。
+  function rackUnitFromY(y, height) {
+    const t = clamp((y - 22) / Math.max(1, height - 44), 0, 0.999);
+    return clamp(12 - Math.floor(t * 12), 1, 12);
+  }
+
+  function drawRackGuides(ctx, width, height) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(232,234,240,0.34)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(18, 12, width - 36, height - 24);
+
+    ctx.strokeStyle = 'rgba(232,234,240,0.13)';
+    ctx.lineWidth = 1;
+    ctx.font = '9px DM Mono';
+    ctx.fillStyle = 'rgba(232,234,240,0.62)';
+    ctx.textAlign = 'left';
+    for (let i = 0; i <= 12; i += 1) {
+      const y = 22 + ((height - 44) * i) / 12;
+      ctx.beginPath();
+      ctx.moveTo(18, y);
+      ctx.lineTo(width - 18, y);
+      ctx.stroke();
+      if (i < 12) ctx.fillText(`U${12 - i}`, 24, y + 12);
+    }
+
+    ctx.save();
+    ctx.translate(12, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = 'rgba(96,165,250,0.78)';
+    ctx.textAlign = 'center';
+    ctx.fillText('前門 / 冷通道', 0, 0);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(width - 12, height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillStyle = 'rgba(248,113,113,0.78)';
+    ctx.textAlign = 'center';
+    ctx.fillText('後門 / 熱通道', 0, 0);
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(232,234,240,0.2)';
+    ctx.setLineDash([4, 5]);
+    ctx.beginPath();
+    ctx.moveTo(width / 2, 12);
+    ctx.lineTo(width / 2, height - 12);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 只在格局、節點位置或擴散模型改變時重算測地線距離場並快取。
   AtmoLink.computeGeoFields = function computeGeoFields() {
-    const { gridResolution, heatmapSize, positions, nodes } = AtmoLink.config;
-    const { partitions, doorOpen } = AtmoLink.state;
-    const grid = { resolution: gridResolution, cell: heatmapSize / gridResolution };
+    const { gridResolution, heatmapWidth, heatmapHeight, nodes } = AtmoLink.config;
+    const { partitions, doorOpen, nodePositions, diffusionMode } = AtmoLink.state;
+    const rows = gridResolution;
+    const cols = Math.max(24, Math.round((heatmapWidth / heatmapHeight) * rows));
+    const grid = { cols, rows, cellX: heatmapWidth / cols, cellY: heatmapHeight / rows };
     const blocked = rasterizeWalls(grid, partitions, doorOpen);
 
     const fields = {};
     nodes.forEach((key) => {
-      const [sx, sy] = positions[key];
-      let gx = clamp(Math.round(sx / grid.cell - 0.5), 0, grid.resolution - 1);
-      let gy = clamp(Math.round(sy / grid.cell - 0.5), 0, grid.resolution - 1);
-      [gx, gy] = nearestFreeCell(blocked, grid.resolution, gx, gy);
-      fields[key] = geodesicField(blocked, grid.resolution, gx, gy);
+      const [sx, sy] = nodePositions[key];
+      let gx = clamp(Math.round(sx / grid.cellX - 0.5), 0, grid.cols - 1);
+      let gy = clamp(Math.round(sy / grid.cellY - 0.5), 0, grid.rows - 1);
+      [gx, gy] = nearestFreeCell(blocked, grid.cols, grid.rows, gx, gy);
+      fields[key] = geodesicField(blocked, grid, gx, gy, diffusionMode);
     });
 
-    AtmoLink.state.geoFields = { fields, blocked, resolution: grid.resolution, cell: grid.cell };
+    AtmoLink.state.geoFields = { fields, blocked, cols: grid.cols, rows: grid.rows, cellX: grid.cellX, cellY: grid.cellY };
     AtmoLink.state.layoutDirty = false;
   };
 
@@ -197,20 +256,79 @@
       });
     });
 
-    document.getElementById('door-toggle').addEventListener('click', () => {
-      AtmoLink.state.doorOpen = !AtmoLink.state.doorOpen;
+    document.getElementById('heat-mode-toggle').addEventListener('click', () => {
+      AtmoLink.state.diffusionMode = AtmoLink.state.diffusionMode === 'buoyancy' ? 'standard' : 'buoyancy';
       AtmoLink.state.layoutDirty = true;
-      const label = AtmoLink.state.doorOpen ? '開' : '關';
-      document.getElementById('door-toggle').textContent = `門狀態：${label}`;
-      document.getElementById('door-label').textContent = AtmoLink.state.doorOpen ? '開啟' : '關閉';
-      if (AtmoLink.renderPartitionLayer) AtmoLink.renderPartitionLayer();
+      const label = AtmoLink.state.diffusionMode === 'buoyancy' ? '熱浮力' : '標準';
+      document.getElementById('heat-mode-toggle').textContent = `擴散：${label}`;
+      document.getElementById('diffusion-label').textContent = `${label} · p${AtmoLink.config.idwPower}`;
       AtmoLink.drawHeatmap();
     });
+
+    document.getElementById('reset-nodes').addEventListener('click', () => {
+      AtmoLink.state.nodePositions = Object.fromEntries(
+        AtmoLink.config.nodes.map((key) => [key, [...AtmoLink.config.positions[key]]])
+      );
+      AtmoLink.state.layoutDirty = true;
+      AtmoLink.drawHeatmap();
+    });
+
+    bindSensorDrag();
   };
 
+  function bindSensorDrag() {
+    const stage = document.getElementById('heatmap-stage');
+    if (!stage) return;
+    let draggingKey = null;
+
+    function stagePoint(event) {
+      const rect = stage.getBoundingClientRect();
+      return [
+        ((event.clientX - rect.left) / rect.width) * AtmoLink.config.heatmapWidth,
+        ((event.clientY - rect.top) / rect.height) * AtmoLink.config.heatmapHeight
+      ];
+    }
+
+    stage.addEventListener('pointerdown', (event) => {
+      if (event.target.closest('.partition')) return;
+      const [x, y] = stagePoint(event);
+      const hit = AtmoLink.config.nodes.find((key) => {
+        const [nx, ny] = AtmoLink.state.nodePositions[key];
+        return Math.hypot(nx - x, ny - y) <= 22;
+      });
+      if (!hit) {
+        AtmoLink.state.selectedPartitionId = null;
+        if (AtmoLink.renderPartitionLayer) AtmoLink.renderPartitionLayer();
+        return;
+      }
+      draggingKey = hit;
+      stage.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+
+    stage.addEventListener('pointermove', (event) => {
+      if (!draggingKey) return;
+      const [x, y] = stagePoint(event);
+      AtmoLink.state.nodePositions[draggingKey] = [
+        clamp(x, 14, AtmoLink.config.heatmapWidth - 14),
+        clamp(y, 14, AtmoLink.config.heatmapHeight - 14)
+      ];
+      AtmoLink.state.layoutDirty = true;
+      AtmoLink.drawHeatmap();
+    });
+
+    stage.addEventListener('pointerup', () => {
+      draggingKey = null;
+    });
+
+    stage.addEventListener('pointercancel', () => {
+      draggingKey = null;
+    });
+  }
+
   AtmoLink.drawHeatmap = function drawHeatmap() {
-    const { colors, nodes, positions, idwPower } = AtmoLink.config;
-    const { sensors, selectedField } = AtmoLink.state;
+    const { colors, nodes, idwPower } = AtmoLink.config;
+    const { sensors, selectedField, nodePositions, diffusionMode } = AtmoLink.state;
     const canvas = document.getElementById('heatmap');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -232,7 +350,7 @@
     if (AtmoLink.state.layoutDirty || !AtmoLink.state.geoFields) {
       AtmoLink.computeGeoFields();
     }
-    const { fields, resolution, cell } = AtmoLink.state.geoFields;
+    const { fields, cols, rows, cellX, cellY } = AtmoLink.state.geoFields;
 
     const unit = selectedField === 'humidity' ? '%RH' : '°C';
     const minV = Math.min(...values) - (selectedField === 'humidity' ? 3 : 0.8);
@@ -245,7 +363,7 @@
     };
 
     // 以測地線距離做 IDW 內插，建立每格的內插值場。
-    const valueField = new Float32Array(resolution * resolution).fill(NaN);
+    const valueField = new Float32Array(cols * rows).fill(NaN);
     for (let i = 0; i < valueField.length; i += 1) {
       let wSum = 0;
       let vSum = 0;
@@ -258,13 +376,13 @@
       }
       if (wSum > 0) valueField[i] = vSum / wSum;
     }
-    dilateField(valueField, resolution, Math.ceil(14 / cell) + 2);
+    dilateField(valueField, cols, rows, Math.ceil(14 / Math.min(cellX, cellY)) + 2);
 
     const img = ctx.createImageData(width, height);
     for (let py = 0; py < height; py += 1) {
-      const fy = py / cell - 0.5;
+      const fy = py / cellY - 0.5;
       for (let px = 0; px < width; px += 1) {
-        const v = sampleField(valueField, resolution, px / cell - 0.5, fy);
+        const v = sampleField(valueField, cols, rows, px / cellX - 0.5, fy);
         const i = (py * width + px) * 4;
         if (Number.isNaN(v)) {
           img.data[i] = 24; img.data[i + 1] = 28; img.data[i + 2] = 35; img.data[i + 3] = 255;
@@ -275,10 +393,11 @@
       }
     }
     ctx.putImageData(img, 0, 0);
+    drawRackGuides(ctx, width, height);
 
     // 感測器節點標記。
     nodes.forEach((key) => {
-      const [x, y] = positions[key];
+      const [x, y] = nodePositions[key];
       const value = sensors[key][selectedField];
       ctx.beginPath();
       ctx.arc(x, y, 13, 0, Math.PI * 2);
@@ -299,13 +418,43 @@
 
     const sensorValues = nodes.map((key) => ({ key, value: sensors[key][selectedField] }));
     const hotspot = sensorValues.reduce((a, b) => (a.value > b.value ? a : b));
-    document.getElementById('hotspot-label').textContent = `Node ${hotspot.key}`;
-    const gx = (sensors.B[selectedField] + sensors.D[selectedField]) / 2 - (sensors.A[selectedField] + sensors.C[selectedField]) / 2;
-    const gy = (sensors.C[selectedField] + sensors.D[selectedField]) / 2 - (sensors.A[selectedField] + sensors.B[selectedField]) / 2;
+    const topKeys = nodes.filter((key) => nodePositions[key][1] < height / 2);
+    const bottomKeys = nodes.filter((key) => nodePositions[key][1] >= height / 2);
+    const leftKeys = nodes.filter((key) => nodePositions[key][0] < width / 2);
+    const rightKeys = nodes.filter((key) => nodePositions[key][0] >= width / 2);
+    const avg = (keys) => keys.length
+      ? keys.reduce((sum, key) => sum + sensors[key][selectedField], 0) / keys.length
+      : NaN;
+    const gx = avg(rightKeys) - avg(leftKeys);
+    const gy = avg(topKeys) - avg(bottomKeys);
     const magnitude = Math.sqrt(gx * gx + gy * gy);
+    const verticalDelta = gy;
+    const frontBackDelta = gx;
+    const hotspotUnit = rackUnitFromY(nodePositions[hotspot.key][1], height);
+    const layerSummary = nodes
+      .map((key) => `${key}:U${rackUnitFromY(nodePositions[key][1], height)}`)
+      .join(' ');
+    const shelfCount = AtmoLink.state.partitions.filter((p) => p.type === 'shelf' || p.type === 'wall').length;
+    const equipmentCount = AtmoLink.state.partitions.filter((p) => p.type === 'equipment').length;
+    const modeLabel = diffusionMode === 'buoyancy' ? '熱浮力' : '標準';
+    const fieldLabel = selectedField === 'humidity' ? '濕度' : '溫度';
+    const directionText = [
+      Number.isFinite(verticalDelta)
+        ? (verticalDelta >= 0 ? `上層比下層高 ${Math.abs(verticalDelta).toFixed(1)} ${unit}` : `下層比上層高 ${Math.abs(verticalDelta).toFixed(1)} ${unit}`)
+        : '上下差暫無法判讀',
+      Number.isFinite(frontBackDelta)
+        ? (frontBackDelta >= 0 ? `後側比前側高 ${Math.abs(frontBackDelta).toFixed(1)} ${unit}` : `前側比後側高 ${Math.abs(frontBackDelta).toFixed(1)} ${unit}`)
+        : '前後差暫無法判讀'
+    ].join('；');
 
-    document.getElementById('gradient-info').textContent =
-      `${selectedField === 'humidity' ? '濕度' : '溫度'}梯度強度 ${magnitude.toFixed(2)} ${unit}。${AtmoLink.state.doorOpen ? '門扉開啟，氣流可繞過上方缺口擴散。' : '門扉關閉，BFS 視距被切斷，熱力邊界停在門前。'}`;
+    document.getElementById('hotspot-label').textContent = `Node ${hotspot.key} · U${hotspotUnit}`;
+    document.getElementById('vertical-delta-label').textContent = Number.isFinite(verticalDelta) ? `${verticalDelta >= 0 ? '+' : ''}${verticalDelta.toFixed(1)} ${unit}` : '--';
+    document.getElementById('front-back-label').textContent = Number.isFinite(frontBackDelta) ? `${frontBackDelta >= 0 ? '+' : ''}${frontBackDelta.toFixed(1)} ${unit}` : '--';
+    document.getElementById('node-layer-label').textContent = layerSummary;
+    document.getElementById('layout-count-label').textContent = `${shelfCount} 層板 · ${equipmentCount} 設備`;
+    document.getElementById('diffusion-label').textContent = `${modeLabel} · p${idwPower}`;
+    document.getElementById('rack-summary').textContent =
+      `${fieldLabel}梯度強度 ${Number.isFinite(magnitude) ? magnitude.toFixed(2) : '--'} ${unit}。${directionText}。${modeLabel}模式${diffusionMode === 'buoyancy' ? '會讓熱區較容易向上延伸。' : '僅依距離與障礙物計算擴散。'}`;
     document.getElementById('legend-bar').style.background =
       `linear-gradient(to right, rgb(${toColor(minV).join(',')}), rgb(${toColor(maxV).join(',')}))`;
     document.getElementById('leg-min').textContent = `${minV.toFixed(1)}${unit}`;
