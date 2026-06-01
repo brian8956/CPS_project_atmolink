@@ -28,6 +28,15 @@
       C: [34, 286],
       D: [286, 286]
     },
+    heatmapSize: 320,
+    gridResolution: 72,
+    idwPower: 2,
+    defaultPartitions: function defaultPartitions() {
+      return [
+        { id: 'door-1', type: 'door', x: 154, y: 30, w: 12, h: 118 },
+        { id: 'wall-1', type: 'wall', x: 154, y: 172, w: 12, h: 118 }
+      ];
+    },
     maxPoints: 50,
     offlineMs: 6000,
     nodes: ['A', 'B', 'C', 'D']

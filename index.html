@@ -61,7 +61,16 @@
           </div>
           <button id="door-toggle" type="button">門狀態：開</button>
         </div>
-        <canvas id="heatmap" width="320" height="320"></canvas>
+        <div class="heatmap-stage" id="heatmap-stage">
+          <canvas id="heatmap" width="320" height="320"></canvas>
+          <div class="partition-layer" id="partition-layer"></div>
+        </div>
+        <div class="partition-tools">
+          <button id="add-wall" type="button">+ 隔板</button>
+          <button id="add-door" type="button">+ 門</button>
+          <button id="reset-layout" type="button">重設格局</button>
+          <span class="partition-hint">拖曳移動 · 右下角縮放 · ✕ 刪除</span>
+        </div>
         <div class="legend">
           <span class="legend-label" id="leg-min">--</span>
           <div class="legend-bar" id="legend-bar"></div>
@@ -77,7 +86,7 @@
           <div class="metric"><span>隔板/門扉</span><strong id="door-label">開啟</strong></div>
         </div>
         <div class="info-box heatmap-note">
-          此版本在前端即時計算 IDW，並用門扉狀態調整隔板穿透權重。完整 BFS 繞牆可以在下一階段移到 Python 後端或 Pico AP 本地服務。
+          前端以 Dijkstra（8 連通）即時計算每個網格點繞過隔板到四個感測器的最短測地線距離，再做反距離權重內插（p = 2）。可直接拖曳、縮放或新增隔板與門，調整機箱內部格局；關門時視距被切斷，熱力邊界會精準停在門前。
         </div>
       </div>
     </div>
@@ -113,6 +122,7 @@
 <script src="assets/js/views/sensors.js"></script>
 <script src="assets/js/views/stratification.js"></script>
 <script src="assets/js/views/heatmap.js"></script>
+<script src="assets/js/views/partitions.js"></script>
 <script src="assets/js/views/network.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>

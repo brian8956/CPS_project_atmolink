@@ -43,6 +43,8 @@
     bindSimulationToggle();
     bindMqttSettings();
     AtmoLink.bindHeatmapControls();
+    AtmoLink.renderPartitionLayer();
+    AtmoLink.bindPartitionControls();
     AtmoLink.renderLog();
     AtmoLink.renderAll();
     AtmoLink.startMqtt();
