@@ -4,6 +4,7 @@
 
   AtmoLink.state = {
     sensors: Object.fromEntries(nodes.map((key) => [key, null])),
+    heights: { ...AtmoLink.config.heights },
     history: {
       labels: [],
       temp: Object.fromEntries(nodes.map((key) => [key, []]))

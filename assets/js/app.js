@@ -42,6 +42,7 @@
     bindTabs();
     bindSimulationToggle();
     bindMqttSettings();
+    AtmoLink.bindStratificationControls();
     AtmoLink.bindHeatmapControls();
     AtmoLink.renderPartitionLayer();
     AtmoLink.bindPartitionControls();

@@ -189,7 +189,26 @@ button:hover, button.active { border-color: rgba(96,165,250,0.65); background: #
   font-family: 'DM Mono', monospace;
   font-size: 0.7rem;
 }
+.height-node { cursor: ns-resize; touch-action: none; user-select: none; transition: box-shadow 0.15s; }
+.height-node:hover { border-color: rgba(96,165,250,0.6); }
+.height-node.dragging { box-shadow: 0 0 0 2px var(--A); z-index: 4; }
 .height-node b { font-family: 'Syne', sans-serif; font-size: 0.82rem; }
+.height-readout { display: grid; gap: 1px; }
+.height-edit { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font-size: 0.66rem; cursor: text; }
+.height-edit input {
+  width: 48px;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  padding: 3px 5px;
+  text-align: right;
+}
+.height-edit input:focus { outline: none; border-color: var(--A); }
+.tower-tools { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.tower-hint { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.64rem; }
 .segmented { display: inline-flex; gap: 4px; background: var(--surface2); border: 1px solid var(--border); padding: 4px; border-radius: 8px; }
 .segmented button { padding: 6px 10px; border-color: transparent; }
 .heatmap-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; }

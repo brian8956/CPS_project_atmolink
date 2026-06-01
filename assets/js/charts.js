@@ -2,15 +2,15 @@
   const AtmoLink = window.AtmoLink;
 
   AtmoLink.initTemperatureChart = function initTemperatureChart() {
-    const { nodes, colors, heights } = AtmoLink.config;
-    const { history } = AtmoLink.state;
+    const { nodes, colors } = AtmoLink.config;
+    const { history, heights } = AtmoLink.state;
 
     AtmoLink.tempChart = new Chart(document.getElementById('tempChart'), {
       type: 'line',
       data: {
         labels: history.labels,
         datasets: nodes.map((key) => ({
-          label: `${key} ${heights[key]}m`,
+          label: `${key} ${heights[key].toFixed(2)}m`,
           data: history.temp[key],
           borderColor: colors[key],
           backgroundColor: 'transparent',

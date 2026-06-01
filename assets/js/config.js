@@ -22,6 +22,8 @@
       C: 1.1,
       D: 1.7
     },
+    heightMin: 0,
+    heightMax: 3.0,
     positions: {
       A: [34, 34],
       B: [286, 34],

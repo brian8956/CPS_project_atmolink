@@ -2,12 +2,13 @@
   const AtmoLink = window.AtmoLink;
 
   AtmoLink.renderSensorCards = function renderSensorCards() {
-    const { nodes, colors, heights } = AtmoLink.config;
+    const { nodes, colors } = AtmoLink.config;
+    const { heights } = AtmoLink.state;
     const cardRoot = document.getElementById('sensor-cards');
     cardRoot.innerHTML = nodes.map((key) => `
       <article class="card card-${key}" id="card-${key}">
         <div class="freshness" id="fresh-${key}">offline</div>
-        <div class="card-label"><span class="sensor-dot" style="background:${colors[key]}"></span>Node ${key} · ${heights[key]}m</div>
+        <div class="card-label"><span class="sensor-dot" style="background:${colors[key]}"></span>Node ${key} · <span id="card-h-${key}">${heights[key].toFixed(2)}m</span></div>
         <div class="card-value" id="value-${key}" style="color:${colors[key]}">--</div>
         <div class="card-meta">
           <span id="temp-${key}">溫度 -- °C</span>

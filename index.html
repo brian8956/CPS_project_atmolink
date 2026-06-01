@@ -37,11 +37,15 @@
       <div class="panel">
         <div class="panel-title">Vertical Thermal Stratification</div>
         <div class="tower" id="tower"></div>
+        <div class="tower-tools">
+          <button id="reset-heights" type="button">重設高度</button>
+          <span class="tower-hint">拖曳節點或輸入數值調整高度（m）</span>
+        </div>
       </div>
       <div class="panel">
         <div class="panel-title">溫度時間序列與舒適度</div>
         <div class="grid-3 metric-row">
-          <div class="metric" id="delta-metric"><span>0.1m - 1.1m 頭腳溫差</span><strong>-- °C</strong></div>
+          <div class="metric" id="delta-metric"><span id="delta-label">頭腳溫差</span><strong>-- °C</strong></div>
           <div class="metric" id="gradient-metric"><span>垂直梯度</span><strong>-- °C/m</strong></div>
           <div class="metric comfort" id="comfort-metric"><span>簡化 PPD / 狀態</span><strong>--</strong></div>
         </div>
