@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AtmoLink 微氣候展示儀表板</title>
+<title>AtmoLink Microclimate Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -12,21 +12,21 @@
 <body>
 <header>
   <div>
-    <h1>AtmoLink 微氣候展示儀表板</h1>
+    <h1>AtmoLink Microclimate Dashboard</h1>
     <p class="subtitle">AHT30 x Raspberry Pi Pico W x MQTT x GitHub Pages</p>
   </div>
   <div class="top-actions">
-    <div class="status-pill" id="status-pill"><span class="dot"></span><span id="status-text">連線中...</span></div>
-    <div class="mode-pill" id="data-mode">資料源：等待中</div>
-    <button id="mqtt-settings" type="button">設定 MQTT</button>
-    <button id="sim-toggle" type="button">啟用模擬</button>
+    <div class="status-pill" id="status-pill"><span class="dot"></span><span id="status-text">Connecting...</span></div>
+    <div class="mode-pill" id="data-mode">Source: waiting</div>
+    <button id="mqtt-settings" type="button">MQTT Settings</button>
+    <button id="sim-toggle" type="button">Start Simulation</button>
   </div>
 </header>
 
-<nav class="tabs" aria-label="展示模式">
-  <button class="tab active" type="button" data-target="stratification">垂直熱分層</button>
-  <button class="tab" type="button" data-target="heatmap-view">垂直機櫃熱力圖</button>
-  <button class="tab" type="button" data-target="network-view">節點狀態監控</button>
+<nav class="tabs" aria-label="Display modes">
+  <button class="tab active" type="button" data-target="stratification">Vertical Stratification</button>
+  <button class="tab" type="button" data-target="heatmap-view">Rack Heatmap</button>
+  <button class="tab" type="button" data-target="network-view">Node Health</button>
 </nav>
 
 <section class="cards" id="sensor-cards"></section>
@@ -38,16 +38,15 @@
         <div class="panel-title">Vertical Thermal Stratification</div>
         <div class="tower" id="tower"></div>
         <div class="tower-tools">
-          <button id="reset-heights" type="button">重設高度</button>
-          <span class="tower-hint">拖曳節點或輸入數值調整高度（m）</span>
+          <button id="reset-heights" type="button">Reset Heights</button>
+          <span class="tower-hint">Drag nodes or enter a height (m)</span>
         </div>
       </div>
       <div class="panel">
-        <div class="panel-title">溫度時間序列與舒適度</div>
-        <div class="grid-3 metric-row">
-          <div class="metric" id="delta-metric"><span id="delta-label">頭腳溫差</span><strong>-- °C</strong></div>
-          <div class="metric" id="gradient-metric"><span>垂直梯度</span><strong>-- °C/m</strong></div>
-          <div class="metric comfort" id="comfort-metric"><span>簡化 PPD / 狀態</span><strong>--</strong></div>
+        <div class="panel-title">Temperature Trend and Local Discomfort</div>
+        <div class="grid-2 metric-row">
+          <div class="metric" id="delta-metric"><span id="delta-label">Head-Ankle Delta T</span><strong>-- °C</strong></div>
+          <div class="metric comfort" id="comfort-metric"><span>Predicted Dissatisfied PD</span><strong>--</strong></div>
         </div>
         <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
       </div>
@@ -59,22 +58,25 @@
       <div class="panel">
         <div class="panel-title">Rack Microclimate Section</div>
         <div class="heatmap-toolbar">
-          <div class="segmented" aria-label="熱力圖資料類型">
-            <button class="active" type="button" data-field="humidity">濕度</button>
-            <button type="button" data-field="temperature">溫度</button>
+          <div class="segmented" aria-label="Heatmap field">
+            <button class="active" type="button" data-field="humidity">Humidity</button>
+            <button type="button" data-field="temperature">Temperature</button>
           </div>
-          <button id="heat-mode-toggle" type="button">擴散：熱浮力</button>
+          <label class="rack-unit-control">Rack U
+            <input id="rack-units" type="number" min="1" max="60" step="1" value="12">
+          </label>
+          <button id="heat-mode-toggle" type="button" disabled>Diffusion: Standard</button>
         </div>
         <div class="heatmap-stage" id="heatmap-stage">
           <canvas id="heatmap" width="320" height="560"></canvas>
           <div class="partition-layer" id="partition-layer"></div>
         </div>
         <div class="partition-tools">
-          <button id="add-shelf" type="button">+ 層板</button>
-          <button id="add-equipment" type="button">+ 設備</button>
-          <button id="reset-layout" type="button">重設機櫃</button>
-          <button id="reset-nodes" type="button">重設節點</button>
-          <span class="partition-hint">拖曳節點/設備 · 右下角縮放 · ✕ 刪除</span>
+          <button id="add-shelf" type="button">+ Shelf</button>
+          <button id="add-equipment" type="button">+ Equipment</button>
+          <button id="reset-layout" type="button">Reset Rack</button>
+          <button id="reset-nodes" type="button">Reset Nodes</button>
+          <span class="partition-hint">Drag nodes/equipment · resize from lower right · x removes</span>
         </div>
         <div class="legend">
           <span class="legend-label" id="leg-min">--</span>
@@ -83,18 +85,18 @@
         </div>
       </div>
       <div class="panel">
-        <div class="panel-title">機櫃剖面判讀</div>
-        <div class="info-box rack-summary" id="rack-summary">等待四個節點資料以生成熱力圖。</div>
+        <div class="panel-title">Rack Section Analysis</div>
+        <div class="info-box rack-summary" id="rack-summary">Waiting for all four nodes to build the heatmap.</div>
         <div class="grid-2 rack-metrics">
-          <div class="metric"><span>最高讀值節點</span><strong id="hotspot-label">--</strong></div>
-          <div class="metric"><span>上層 - 下層</span><strong id="vertical-delta-label">--</strong></div>
-          <div class="metric"><span>後側 - 前側</span><strong id="front-back-label">--</strong></div>
-          <div class="metric"><span>節點所在層位</span><strong id="node-layer-label">--</strong></div>
-          <div class="metric"><span>層板 / 設備</span><strong id="layout-count-label">--</strong></div>
-          <div class="metric"><span>擴散 / IDW</span><strong id="diffusion-label">熱浮力 · p2</strong></div>
+          <div class="metric"><span>Hotspot Node</span><strong id="hotspot-label">--</strong></div>
+          <div class="metric"><span>Upper - Lower</span><strong id="vertical-delta-label">--</strong></div>
+          <div class="metric"><span>Rear - Front</span><strong id="front-back-label">--</strong></div>
+          <div class="metric"><span>Node Rack Units</span><strong id="node-layer-label">--</strong></div>
+          <div class="metric"><span>Shelves / Equipment</span><strong id="layout-count-label">--</strong></div>
+          <div class="metric"><span>Diffusion / IDW</span><strong id="diffusion-label">Standard · p2</strong></div>
         </div>
         <div class="info-box heatmap-note">
-          左右方向代表機櫃前後：左側為前門進風面，右側為後門排熱面；上下方向代表 U 位高度。可拖曳節點、層板與設備來對應現場擺放，系統會即時計算繞行障礙物後的 Dijkstra + IDW 熱力分布。
+          Left-to-right represents rack front-to-rear: the left side is the front cold aisle and the right side is the rear hot aisle. Drag nodes, shelves, and equipment to match the field layout; the system recomputes Dijkstra + IDW heat distribution around obstacles.
         </div>
       </div>
     </div>
@@ -107,11 +109,11 @@
         <div class="topology" id="topology"></div>
       </div>
       <div class="panel">
-        <div class="panel-title">節點健康狀態</div>
+        <div class="panel-title">Node Health Status</div>
         <div class="grid-3 metric-row">
-          <div class="metric"><span>在線節點</span><strong id="online-count">0 / 4</strong></div>
-          <div class="metric"><span>平均資料年齡</span><strong id="avg-age">-- s</strong></div>
-          <div class="metric"><span>系統狀態</span><strong id="fault-state">等待資料</strong></div>
+          <div class="metric"><span>Online Nodes</span><strong id="online-count">0 / 4</strong></div>
+          <div class="metric"><span>Average Data Age</span><strong id="avg-age">-- s</strong></div>
+          <div class="metric"><span>System State</span><strong id="fault-state">Waiting for data</strong></div>
         </div>
         <div class="event-log" id="event-log"></div>
       </div>
@@ -121,7 +123,7 @@
 
 <footer>
   <span>wss://2aff883c85d24676a738e310f0dbc71d.s1.eu.hivemq.cloud:8884/mqtt · room/sensor/#</span>
-  <span id="last-update">最後更新：--</span>
+  <span id="last-update">Last update: --</span>
 </footer>
 
 <script src="assets/js/config.js"></script>

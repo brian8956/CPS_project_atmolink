@@ -15,7 +15,7 @@
     return AtmoLink.config.heatmapHeight;
   }
 
-  // 取得「顯示像素 -> 模型座標」的縮放比例。
+  // Get the display-pixel to model-coordinate scale factor.
   function scaleFactor() {
     const stage = getStage();
     const rect = stage.getBoundingClientRect();
@@ -93,19 +93,19 @@
     const label = document.createElement('span');
     label.className = 'partition-label';
     const labels = {
-      shelf: '層板',
-      equipment: '設備',
-      wall: '層板',
-      door: AtmoLink.state.doorOpen ? '門·開' : '門·關'
+      shelf: 'Shelf',
+      equipment: 'Equipment',
+      wall: 'Shelf',
+      door: AtmoLink.state.doorOpen ? 'Door open' : 'Door closed'
     };
-    label.textContent = labels[partition.type] || '障礙';
+    label.textContent = labels[partition.type] || 'Obstacle';
     el.appendChild(label);
 
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'partition-remove';
     remove.textContent = '×';
-    remove.title = '刪除';
+    remove.title = 'Remove';
     remove.addEventListener('pointerdown', (e) => e.stopPropagation());
     remove.addEventListener('click', (e) => {
       e.stopPropagation();

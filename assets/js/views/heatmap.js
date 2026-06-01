@@ -10,7 +10,7 @@
     return Math.max(min, Math.min(max, value));
   }
 
-  // 將層板、設備與關閉的門光柵化為阻擋格點。
+  // Rasterize shelves, equipment, and closed doors into blocked grid cells.
   function rasterizeWalls(grid, partitions, doorOpen) {
     const { cols, rows, cellX, cellY } = grid;
     const blocked = new Uint8Array(cols * rows);
@@ -30,7 +30,7 @@
     return blocked;
   }
 
-  // 感測器落在牆內時，往外找最近的可通行格點當作起點。
+  // If a sensor falls inside a wall, use the nearest free cell as the source.
   function nearestFreeCell(blocked, cols, rows, gx, gy) {
     const start = gy * cols + gx;
     if (!blocked[start]) return [gx, gy];
@@ -52,7 +52,7 @@
     return [gx, gy];
   }
 
-  // 單源 Dijkstra：計算繞過牆壁的最短測地線距離場。
+  // Single-source Dijkstra field around blocking geometry.
   function geodesicField(blocked, grid, srcX, srcY, diffusionMode) {
     const { cols, rows, cellX, cellY } = grid;
     const total = cols * rows;
@@ -109,7 +109,7 @@
         if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
         const ni = ny * cols + nx;
         if (blocked[ni]) continue;
-        // 不允許從牆角的對角縫隙穿過。
+        // Prevent diagonal movement through blocked corners.
         if (dx !== 0 && dy !== 0 && blocked[gy * cols + nx] && blocked[ny * cols + gx]) continue;
         const physicalStep = Math.sqrt((dx * cellX) ** 2 + (dy * cellY) ** 2);
         let directionPenalty = 1;
@@ -127,7 +127,7 @@
     return dist;
   }
 
-  // 把 NaN（牆內/不可達）格點以鄰居平均逐步填補，避免邊緣破洞。
+  // Fill NaN cells with neighbor averages to avoid edge gaps.
   function dilateField(values, cols, rows, passes) {
     for (let p = 0; p < passes; p += 1) {
       const copy = values.slice();
@@ -175,11 +175,14 @@
   }
 
   function rackUnitFromY(y, height) {
+    const rackUnits = AtmoLink.state.rackUnits;
     const t = clamp((y - 22) / Math.max(1, height - 44), 0, 0.999);
-    return clamp(12 - Math.floor(t * 12), 1, 12);
+    return clamp(rackUnits - Math.floor(t * rackUnits), 1, rackUnits);
   }
 
   function drawRackGuides(ctx, width, height) {
+    const rackUnits = AtmoLink.state.rackUnits;
+    const labelEvery = Math.max(1, Math.ceil(rackUnits / 24));
     ctx.save();
     ctx.strokeStyle = 'rgba(232,234,240,0.34)';
     ctx.lineWidth = 2;
@@ -190,13 +193,13 @@
     ctx.font = '9px DM Mono';
     ctx.fillStyle = 'rgba(232,234,240,0.62)';
     ctx.textAlign = 'left';
-    for (let i = 0; i <= 12; i += 1) {
-      const y = 22 + ((height - 44) * i) / 12;
+    for (let i = 0; i <= rackUnits; i += 1) {
+      const y = 22 + ((height - 44) * i) / rackUnits;
       ctx.beginPath();
       ctx.moveTo(18, y);
       ctx.lineTo(width - 18, y);
       ctx.stroke();
-      if (i < 12) ctx.fillText(`U${12 - i}`, 24, y + 12);
+      if (i < rackUnits && i % labelEvery === 0) ctx.fillText(`U${rackUnits - i}`, 24, y + 12);
     }
 
     ctx.save();
@@ -204,7 +207,7 @@
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = 'rgba(96,165,250,0.78)';
     ctx.textAlign = 'center';
-    ctx.fillText('前門 / 冷通道', 0, 0);
+    ctx.fillText('Front / Cold Aisle', 0, 0);
     ctx.restore();
 
     ctx.save();
@@ -212,7 +215,7 @@
     ctx.rotate(Math.PI / 2);
     ctx.fillStyle = 'rgba(248,113,113,0.78)';
     ctx.textAlign = 'center';
-    ctx.fillText('後門 / 熱通道', 0, 0);
+    ctx.fillText('Rear / Hot Aisle', 0, 0);
     ctx.restore();
 
     ctx.strokeStyle = 'rgba(232,234,240,0.2)';
@@ -224,7 +227,22 @@
     ctx.restore();
   }
 
-  // 只在格局、節點位置或擴散模型改變時重算測地線距離場並快取。
+  function updateDiffusionControl() {
+    const toggle = document.getElementById('heat-mode-toggle');
+    const label = AtmoLink.state.diffusionMode === 'buoyancy' ? 'Buoyancy' : 'Standard';
+    const humiditySelected = AtmoLink.state.selectedField === 'humidity';
+    if (humiditySelected) {
+      AtmoLink.state.diffusionMode = 'standard';
+      toggle.textContent = 'Diffusion: Standard';
+      toggle.disabled = true;
+    } else {
+      toggle.textContent = `Diffusion: ${label}`;
+      toggle.disabled = false;
+    }
+    document.getElementById('diffusion-label').textContent = `${AtmoLink.state.diffusionMode === 'buoyancy' ? 'Buoyancy' : 'Standard'} · p${AtmoLink.config.idwPower}`;
+  }
+
+  // Recompute and cache geodesic fields only when layout, nodes, or diffusion mode changes.
   AtmoLink.computeGeoFields = function computeGeoFields() {
     const { gridResolution, heatmapWidth, heatmapHeight, nodes } = AtmoLink.config;
     const { partitions, doorOpen, nodePositions, diffusionMode } = AtmoLink.state;
@@ -252,16 +270,27 @@
         document.querySelectorAll('[data-field]').forEach((item) => item.classList.remove('active'));
         button.classList.add('active');
         AtmoLink.state.selectedField = button.dataset.field;
+        if (AtmoLink.state.selectedField === 'humidity' && AtmoLink.state.diffusionMode !== 'standard') {
+          AtmoLink.state.diffusionMode = 'standard';
+          AtmoLink.state.layoutDirty = true;
+        }
+        updateDiffusionControl();
         AtmoLink.drawHeatmap();
       });
     });
 
     document.getElementById('heat-mode-toggle').addEventListener('click', () => {
+      if (AtmoLink.state.selectedField === 'humidity') return;
       AtmoLink.state.diffusionMode = AtmoLink.state.diffusionMode === 'buoyancy' ? 'standard' : 'buoyancy';
       AtmoLink.state.layoutDirty = true;
-      const label = AtmoLink.state.diffusionMode === 'buoyancy' ? '熱浮力' : '標準';
-      document.getElementById('heat-mode-toggle').textContent = `擴散：${label}`;
-      document.getElementById('diffusion-label').textContent = `${label} · p${AtmoLink.config.idwPower}`;
+      updateDiffusionControl();
+      AtmoLink.drawHeatmap();
+    });
+
+    document.getElementById('rack-units').addEventListener('change', (event) => {
+      const units = clamp(Math.round(Number(event.target.value)), 1, 60);
+      AtmoLink.state.rackUnits = Number.isFinite(units) ? units : AtmoLink.config.rackUnits;
+      event.target.value = AtmoLink.state.rackUnits;
       AtmoLink.drawHeatmap();
     });
 
@@ -274,6 +303,7 @@
     });
 
     bindSensorDrag();
+    updateDiffusionControl();
   };
 
   function bindSensorDrag() {
@@ -343,7 +373,7 @@
       ctx.fillStyle = '#8b93a3';
       ctx.font = '13px DM Mono';
       ctx.textAlign = 'center';
-      ctx.fillText('等待四個節點資料...', width / 2, height / 2);
+      ctx.fillText('Waiting for all four nodes...', width / 2, height / 2);
       return;
     }
 
@@ -362,7 +392,7 @@
         : [Math.round(40 + t * 215), Math.round(130 - t * 45), Math.round(220 - t * 175)];
     };
 
-    // 以測地線距離做 IDW 內插，建立每格的內插值場。
+    // Build the interpolated value field with IDW over geodesic distances.
     const valueField = new Float32Array(cols * rows).fill(NaN);
     for (let i = 0; i < valueField.length; i += 1) {
       let wSum = 0;
@@ -395,7 +425,7 @@
     ctx.putImageData(img, 0, 0);
     drawRackGuides(ctx, width, height);
 
-    // 感測器節點標記。
+    // Sensor node markers.
     nodes.forEach((key) => {
       const [x, y] = nodePositions[key];
       const value = sensors[key][selectedField];
@@ -436,25 +466,25 @@
       .join(' ');
     const shelfCount = AtmoLink.state.partitions.filter((p) => p.type === 'shelf' || p.type === 'wall').length;
     const equipmentCount = AtmoLink.state.partitions.filter((p) => p.type === 'equipment').length;
-    const modeLabel = diffusionMode === 'buoyancy' ? '熱浮力' : '標準';
-    const fieldLabel = selectedField === 'humidity' ? '濕度' : '溫度';
+    const modeLabel = diffusionMode === 'buoyancy' ? 'Buoyancy' : 'Standard';
+    const fieldLabel = selectedField === 'humidity' ? 'Humidity' : 'Temperature';
     const directionText = [
       Number.isFinite(verticalDelta)
-        ? (verticalDelta >= 0 ? `上層比下層高 ${Math.abs(verticalDelta).toFixed(1)} ${unit}` : `下層比上層高 ${Math.abs(verticalDelta).toFixed(1)} ${unit}`)
-        : '上下差暫無法判讀',
+        ? (verticalDelta >= 0 ? `upper is ${Math.abs(verticalDelta).toFixed(1)} ${unit} higher than lower` : `lower is ${Math.abs(verticalDelta).toFixed(1)} ${unit} higher than upper`)
+        : 'vertical delta unavailable',
       Number.isFinite(frontBackDelta)
-        ? (frontBackDelta >= 0 ? `後側比前側高 ${Math.abs(frontBackDelta).toFixed(1)} ${unit}` : `前側比後側高 ${Math.abs(frontBackDelta).toFixed(1)} ${unit}`)
-        : '前後差暫無法判讀'
-    ].join('；');
+        ? (frontBackDelta >= 0 ? `rear is ${Math.abs(frontBackDelta).toFixed(1)} ${unit} higher than front` : `front is ${Math.abs(frontBackDelta).toFixed(1)} ${unit} higher than rear`)
+        : 'front-rear delta unavailable'
+    ].join('; ');
 
     document.getElementById('hotspot-label').textContent = `Node ${hotspot.key} · U${hotspotUnit}`;
     document.getElementById('vertical-delta-label').textContent = Number.isFinite(verticalDelta) ? `${verticalDelta >= 0 ? '+' : ''}${verticalDelta.toFixed(1)} ${unit}` : '--';
     document.getElementById('front-back-label').textContent = Number.isFinite(frontBackDelta) ? `${frontBackDelta >= 0 ? '+' : ''}${frontBackDelta.toFixed(1)} ${unit}` : '--';
     document.getElementById('node-layer-label').textContent = layerSummary;
-    document.getElementById('layout-count-label').textContent = `${shelfCount} 層板 · ${equipmentCount} 設備`;
+    document.getElementById('layout-count-label').textContent = `${shelfCount} shelves · ${equipmentCount} equipment`;
     document.getElementById('diffusion-label').textContent = `${modeLabel} · p${idwPower}`;
     document.getElementById('rack-summary').textContent =
-      `${fieldLabel}梯度強度 ${Number.isFinite(magnitude) ? magnitude.toFixed(2) : '--'} ${unit}。${directionText}。${modeLabel}模式${diffusionMode === 'buoyancy' ? '會讓熱區較容易向上延伸。' : '僅依距離與障礙物計算擴散。'}`;
+      `${fieldLabel} gradient ${Number.isFinite(magnitude) ? magnitude.toFixed(2) : '--'} ${unit}. ${directionText}. ${modeLabel} mode ${diffusionMode === 'buoyancy' ? 'lets heat spread upward more easily.' : 'uses distance and obstacles only.'}`;
     document.getElementById('legend-bar').style.background =
       `linear-gradient(to right, rgb(${toColor(minV).join(',')}), rgb(${toColor(maxV).join(',')}))`;
     document.getElementById('leg-min').textContent = `${minV.toFixed(1)}${unit}`;

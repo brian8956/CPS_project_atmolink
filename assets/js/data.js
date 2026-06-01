@@ -16,27 +16,27 @@
 
   AtmoLink.promptForMqttCredentials = function promptForMqttCredentials() {
     const current = AtmoLink.getStoredMqttCredentials();
-    const username = window.prompt('MQTT 使用者名稱', current?.username || '');
+    const username = window.prompt('MQTT username', current?.username || '');
     if (!username) return null;
-    const password = window.prompt('MQTT 密碼（只會儲存在此瀏覽器 localStorage）', '');
+    const password = window.prompt('MQTT password (stored only in this browser localStorage)', '');
     if (!password) return null;
 
     const credentials = { username, password };
     localStorage.setItem(AtmoLink.config.mqttCredentialsStorageKey, JSON.stringify(credentials));
-    AtmoLink.addLog('MQTT', '已在此瀏覽器儲存 MQTT 登入資訊。');
+    AtmoLink.addLog('MQTT', 'MQTT credentials were saved in this browser.');
     return credentials;
   };
 
   AtmoLink.setSimulation = function setSimulation(enabled) {
     AtmoLink.state.simulate = enabled;
-    document.getElementById('sim-toggle').textContent = enabled ? '停止模擬' : '啟用模擬';
-    document.getElementById('data-mode').textContent = enabled ? '資料源：模擬展示' : '資料源：MQTT / 等待資料';
+    document.getElementById('sim-toggle').textContent = enabled ? 'Stop Simulation' : 'Start Simulation';
+    document.getElementById('data-mode').textContent = enabled ? 'Source: simulation' : 'Source: MQTT / waiting';
 
     if (AtmoLink.state.simTimer) clearInterval(AtmoLink.state.simTimer);
     AtmoLink.state.simTimer = null;
 
     if (enabled) {
-      AtmoLink.addLog('SIM', '啟用模擬資料流程，可展示熱分層、熱力圖與節點失聯。');
+      AtmoLink.addLog('SIM', 'Simulation started for stratification, heatmap, and node timeout demos.');
       AtmoLink.state.simTimer = setInterval(AtmoLink.generateSimulation, 1000);
       AtmoLink.generateSimulation();
     }
@@ -75,7 +75,7 @@
   AtmoLink.pushHistory = function pushHistory(key, temperature) {
     const { maxPoints } = AtmoLink.config;
     const { history } = AtmoLink.state;
-    const now = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     if (history.labels[history.labels.length - 1] !== now) {
       history.labels.push(now);
@@ -102,7 +102,7 @@
 
     AtmoLink.config.nodes.forEach((key, index) => {
       if (key === 'C' && offlineC) {
-        if (tick % 45 === 31) AtmoLink.addLog('FAULT', 'Node C 模擬斷電，前端將以逾時判定失聯。');
+        if (tick % 45 === 31) AtmoLink.addLog('FAULT', 'Node C simulated power loss; the UI will mark it offline by timeout.');
         return;
       }
       AtmoLink.ingest({
@@ -125,16 +125,16 @@
 
     if (!window.mqtt) {
       pill.className = 'status-pill error';
-      statusText.textContent = 'MQTT 函式庫未載入';
+      statusText.textContent = 'MQTT library missing';
       AtmoLink.setSimulation(true);
       return;
     }
 
     if (!credentials) {
       pill.className = 'status-pill';
-      statusText.textContent = '未設定 MQTT';
-      document.getElementById('data-mode').textContent = '資料源：模擬展示';
-      AtmoLink.addLog('MQTT', '未設定 MQTT 登入資訊，改用模擬模式。');
+      statusText.textContent = 'MQTT not configured';
+      document.getElementById('data-mode').textContent = 'Source: simulation';
+      AtmoLink.addLog('MQTT', 'MQTT credentials are missing; using simulation mode.');
       AtmoLink.setSimulation(true);
       return;
     }
@@ -153,18 +153,18 @@
 
     client.on('connect', () => {
       pill.className = 'status-pill connected';
-      statusText.textContent = '已連線';
-      document.getElementById('data-mode').textContent = AtmoLink.state.simulate ? '資料源：模擬展示' : '資料源：MQTT 已連線';
+      statusText.textContent = 'Connected';
+      document.getElementById('data-mode').textContent = AtmoLink.state.simulate ? 'Source: simulation' : 'Source: MQTT connected';
       Object.values(topics).forEach((topic) => client.subscribe(topic));
-      AtmoLink.addLog('MQTT', '已連線並訂閱 room/sensor/A-D。');
+      AtmoLink.addLog('MQTT', 'Connected and subscribed to room/sensor/A-D.');
     });
     client.on('error', () => {
       pill.className = 'status-pill error';
-      statusText.textContent = '連線失敗';
+      statusText.textContent = 'Connection failed';
     });
     client.on('reconnect', () => {
       pill.className = 'status-pill';
-      statusText.textContent = '重新連線中...';
+      statusText.textContent = 'Reconnecting...';
     });
     client.on('message', (topic, payload) => {
       try {
@@ -172,10 +172,10 @@
         const key = Object.keys(topics).find((nodeKey) => topics[nodeKey] === topic);
         AtmoLink.ingest(data, key, 'mqtt');
         if (AtmoLink.state.simulate) AtmoLink.setSimulation(false);
-        document.getElementById('data-mode').textContent = '資料源：MQTT 即時資料';
+        document.getElementById('data-mode').textContent = 'Source: live MQTT';
         clearTimeout(fallbackTimer);
       } catch (err) {
-        AtmoLink.addLog('WARN', `訊息解析失敗：${err.message}`);
+        AtmoLink.addLog('WARN', `Message parse failed: ${err.message}`);
       }
     });
   };

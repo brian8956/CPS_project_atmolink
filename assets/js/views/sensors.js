@@ -11,8 +11,8 @@
         <div class="card-label"><span class="sensor-dot" style="background:${colors[key]}"></span>Node ${key} · <span id="card-h-${key}">${heights[key].toFixed(2)}m</span></div>
         <div class="card-value" id="value-${key}" style="color:${colors[key]}">--</div>
         <div class="card-meta">
-          <span id="temp-${key}">溫度 -- °C</span>
-          <span id="hum-${key}">濕度 -- %RH</span>
+          <span id="temp-${key}">Temperature -- °C</span>
+          <span id="hum-${key}">Humidity -- %RH</span>
           <span id="seq-${key}">seq -- · battery -- V</span>
         </div>
       </article>
@@ -34,8 +34,8 @@
       const trend = Math.abs(diff) < 0.1 ? '' : diff > 0 ? ` +${diff.toFixed(1)}%` : ` ${diff.toFixed(1)}%`;
 
       document.getElementById(`value-${key}`).textContent = `${sensor.humidity.toFixed(1)}%`;
-      document.getElementById(`temp-${key}`).textContent = `溫度 ${sensor.temperature.toFixed(2)} °C`;
-      document.getElementById(`hum-${key}`).textContent = `濕度 ${sensor.humidity.toFixed(1)} %RH${trend}`;
+      document.getElementById(`temp-${key}`).textContent = `Temperature ${sensor.temperature.toFixed(2)} °C`;
+      document.getElementById(`hum-${key}`).textContent = `Humidity ${sensor.humidity.toFixed(1)} %RH${trend}`;
       document.getElementById(`seq-${key}`).textContent = `seq ${sensor.seq || '--'} · battery ${sensor.battery == null ? '--' : sensor.battery.toFixed(2)} V`;
       document.getElementById(`fresh-${key}`).textContent = online ? `${AtmoLink.ageSeconds(key).toFixed(1)}s` : 'offline';
       previousHumidity[key] = sensor.humidity;

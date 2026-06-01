@@ -31,16 +31,16 @@
     document.getElementById('avg-age').textContent = ages.length ? `${(ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1)} s` : '-- s';
 
     const fault = document.getElementById('fault-state');
-    if (onlineKeys.length === 4) fault.textContent = '全節點正常';
-    else if (onlineKeys.length >= 2) fault.textContent = '容錯運作中';
-    else if (onlineKeys.length === 1) fault.textContent = '僅 AP/單節點';
-    else fault.textContent = '等待資料';
+    if (onlineKeys.length === 4) fault.textContent = 'All nodes healthy';
+    else if (onlineKeys.length >= 2) fault.textContent = 'Degraded but running';
+    else if (onlineKeys.length === 1) fault.textContent = 'Single-node only';
+    else fault.textContent = 'Waiting for data';
 
     AtmoLink.renderLog();
   };
 
   AtmoLink.addLog = function addLog(source, message) {
-    const text = `${new Date().toLocaleTimeString('zh-TW')} [${source}] ${message}`;
+    const text = `${new Date().toLocaleTimeString('en-US')} [${source}] ${message}`;
     AtmoLink.state.logItems.unshift(text);
     AtmoLink.state.logItems = AtmoLink.state.logItems.slice(0, 12);
     AtmoLink.renderLog();
@@ -50,6 +50,6 @@
     const root = document.getElementById('event-log');
     root.innerHTML = AtmoLink.state.logItems.length
       ? AtmoLink.state.logItems.map((item) => `<div>${item}</div>`).join('')
-      : '<div>等待 MQTT 或模擬事件。</div>';
+      : '<div>Waiting for MQTT or simulation events.</div>';
   };
 })(window);

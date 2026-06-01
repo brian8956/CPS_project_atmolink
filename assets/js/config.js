@@ -33,6 +33,7 @@
     heatmapWidth: 320,
     heatmapHeight: 560,
     heatmapSize: 320,
+    rackUnits: 12,
     gridResolution: 92,
     idwPower: 2,
     defaultPartitions: function defaultPartitions() {

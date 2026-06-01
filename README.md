@@ -1,20 +1,20 @@
 # CPS_project_atomlink
 
-AtmoLink 是一個以 Raspberry Pi Pico W 與 AHT30 溫濕度感測器為核心的微氣候展示系統。此版本維持 GitHub Pages 可直接部署的靜態單頁入口，同時將前端樣式與功能拆分到 `assets/`，並提供 Pico W MicroPython 韌體範本。
+AtmoLink is a microclimate demonstration system built with Raspberry Pi Pico W boards and AHT30 temperature/humidity sensors. This version keeps a static single-page entry point for GitHub Pages, splits frontend code into `assets/`, and includes Pico W MicroPython firmware templates.
 
 ## Demo Dashboard
 
-開啟 `index.html` 即可使用。頁面包含三個展示模式：
+Open `index.html` to run the dashboard. The page includes three display modes:
 
-- `垂直熱分層`：四個節點對應 0.1m、0.6m、1.1m、1.7m，顯示頭腳溫差、垂直梯度與簡化 PPD 狀態。
-- `垂直機櫃熱力圖`：以機櫃剖面呈現四個可拖曳節點，使用 Dijkstra（8 連通）計算繞過層板/設備的最短測地線距離，再做反距離權重內插（IDW, p = 2）。可切換溫度/濕度與標準/熱浮力擴散；熱浮力模式會降低向上擴散成本、提高向下擴散成本，呈現更接近機櫃熱對流的熱區形態。
-- `節點狀態監控`：顯示節點拓撲、最後回報時間、封包序號、資料新鮮度與失聯狀態。
+- `Vertical Stratification`: four nodes default to A=0.1 m, B=0.6 m, C=1.1 m, and D=1.7 m. The view shows the vertical air temperature difference from the lowest node, treated as ankle height, to the highest node, treated as head height. It calculates local dissatisfied percentage PD according to ISO 7730:2005 section 6.3. This PD represents the percentage of people predicted to feel discomfort from vertical air temperature difference; it is not the overall PPD derived from PMV.
+- `Rack Heatmap`: renders a vertical rack section with four draggable nodes and a user-defined rack unit count. It uses Dijkstra shortest geodesic distance over an 8-connected grid to route around shelves and equipment, then applies inverse distance weighting interpolation with IDW power p = 2. The view can switch between temperature and humidity. Buoyancy diffusion is available only for temperature because it models heat spread; humidity uses standard diffusion.
+- `Node Health`: displays node topology, last report age, packet sequence numbers, data freshness, and offline state.
 
-如果 MQTT 沒有連線或沒有收到真實硬體資料，頁面會自動啟用模擬模式。也可以用右上角按鈕手動啟用或停止模擬。
+If MQTT is not connected or no real hardware data is received, the page automatically enters simulation mode. The top-right button can also manually start or stop simulation.
 
 ## Frontend Structure
 
-前端仍以 `index.html` 作為 GitHub Pages 的入口頁，但功能已拆到多個靜態檔案，不需要 bundler 或建置步驟：
+The frontend uses `index.html` as the GitHub Pages entry point. It does not require a bundler or build step:
 
 ```text
 index.html
@@ -34,17 +34,17 @@ assets/
       network.js
 ```
 
-- `assets/css/styles.css`：全站版面、卡片、分頁、熱力圖、拓撲圖樣式。
-- `assets/js/config.js`：MQTT broker、topic、節點高度、顏色、座標等固定設定。
-- `assets/js/state.js`：前端共用狀態與節點在線/資料年齡 helper。
-- `assets/js/charts.js`：Chart.js 溫度時間序列初始化與更新。
-- `assets/js/data.js`：MQTT 連線、payload 正規化、資料寫入、模擬資料。
-- `assets/js/app.js`：頁面初始化、分頁切換、定時重繪。
-- `assets/js/views/`：各展示區塊的 DOM 產生與更新邏輯。
+- `assets/css/styles.css`: global layout, cards, tabs, heatmap, and topology styles.
+- `assets/js/config.js`: MQTT broker, topics, node heights, colors, coordinates, and fixed settings.
+- `assets/js/state.js`: shared frontend state and helpers for online status and data age.
+- `assets/js/charts.js`: Chart.js temperature time-series initialization and updates.
+- `assets/js/data.js`: MQTT connection, payload normalization, data ingestion, and simulation data.
+- `assets/js/app.js`: page initialization, tab switching, and timed redraws.
+- `assets/js/views/`: DOM generation and update logic for each view.
 
 ## MQTT Topics
 
-前端訂閱以下 topic：
+The frontend subscribes to these topics:
 
 ```text
 room/sensor/A
@@ -53,17 +53,17 @@ room/sensor/C
 room/sensor/D
 ```
 
-目前前端使用 HiveMQ WebSocket：
+The current frontend uses this HiveMQ WebSocket endpoint:
 
 ```text
 wss://2aff883c85d24676a738e310f0dbc71d.s1.eu.hivemq.cloud:8884/mqtt
 ```
 
-MQTT 使用者名稱與密碼不應提交到 GitHub。前端右上角提供 `設定 MQTT` 按鈕，登入資訊只會存在目前瀏覽器的 `localStorage`。未設定時，展示頁會自動改用模擬資料。
+MQTT usernames and passwords should not be committed to GitHub. The top-right `MQTT Settings` button stores credentials only in the current browser `localStorage`. If credentials are not configured, the dashboard automatically falls back to simulation mode.
 
 ## Payload Format
 
-每個 Pico W 節點發送固定 JSON 格式：
+Each Pico W node publishes a fixed JSON payload:
 
 ```json
 {
@@ -77,52 +77,52 @@ MQTT 使用者名稱與密碼不應提交到 GitHub。前端右上角提供 `設
 }
 ```
 
-欄位說明：
+Fields:
 
-- `node_id`：節點代號，必須是 `A`、`B`、`C`、`D`。
-- `temperature`：攝氏溫度。
-- `humidity`：相對濕度，單位 `%RH`。
-- `timestamp`：節點端時間戳，毫秒。
-- `seq`：封包序號，用於觀察是否掉包或停送。
-- `battery`：電池電壓，可先填 `null`。
-- `mode`：通訊模式，目前主線使用 `wifi`。
+- `node_id`: node identifier, must be `A`, `B`, `C`, or `D`.
+- `temperature`: air temperature in degrees Celsius.
+- `humidity`: relative humidity in `%RH`.
+- `timestamp`: node-side timestamp in milliseconds.
+- `seq`: packet sequence number, used to observe dropped or stalled packets.
+- `battery`: battery voltage, can be `null`.
+- `mode`: communication mode, currently `wifi` on the main path.
 
 ## Pico W Firmware
 
-韌體範本位於 `firmware/`：
+Firmware templates live in `firmware/`:
 
-- `firmware/aht30.py`：AHT30 I2C 讀取驅動。
-- `firmware/config.example.py`：節點設定範本。
-- `firmware/main.py`：Wi-Fi、NTP、MQTT reconnect 與資料發送主迴圈。
+- `firmware/aht30.py`: AHT30 I2C reader.
+- `firmware/config.example.py`: node configuration template.
+- `firmware/main.py`: Wi-Fi, NTP, MQTT reconnect, and publish loop.
 
-設定步驟：
+Setup:
 
-1. 將 `firmware/config.example.py` 複製成 Pico W 上的 `config.py`。
-2. 修改 `WIFI_SSID`、`WIFI_PASSWORD`、`MQTT_USER`、`MQTT_PASSWORD`。
-3. 每個節點設定不同的 `NODE_ID`，例如 `A`、`B`、`C`、`D`。
-4. 將 `aht30.py`、`config.py`、`main.py` 上傳到 Pico W。
-5. 重新啟動 Pico W，確認前端 dashboard 收到資料。
+1. Copy `firmware/config.example.py` to `config.py` on the Pico W.
+2. Edit `WIFI_SSID`, `WIFI_PASSWORD`, `MQTT_USER`, and `MQTT_PASSWORD`.
+3. Set a different `NODE_ID` for each node, for example `A`, `B`, `C`, and `D`.
+4. Upload `aht30.py`, `config.py`, and `main.py` to the Pico W.
+5. Restart the Pico W and confirm that the frontend receives data.
 
-預設發送頻率是 1 秒一次：
+The default publish interval is once per second:
 
 ```python
 PUBLISH_INTERVAL_MS = 1000
 ```
 
-展示現場如果 Wi-Fi 較不穩，可以改成 2000。
+For less stable Wi-Fi environments, change it to 2000.
 
-## 展示流程建議
+## Demo Flow
 
-1. 先開啟網頁並確認模擬模式可以正常跑。
-2. 接上四個 Pico W，確認四張節點卡會從模擬資料切換成 MQTT 即時資料。
-3. 切到 `垂直熱分層`，用熱源或風扇製造溫度曲線發散/收斂。
-4. 切到 `垂直機櫃熱力圖`，拖曳節點與層板/設備對應實際機櫃位置，再用熱源或風扇觀察上升熱區與局部高溫/高濕區。
-5. 切到 `節點狀態監控`，拔掉任一節點電源，觀察節點逾時變灰與系統狀態。
+1. Open the web page and confirm that simulation mode runs correctly.
+2. Power on the four Pico W nodes and confirm that the four node cards switch from simulation data to live MQTT data.
+3. Switch to `Vertical Stratification`, then use a heat source or fan to make the temperature profile diverge or converge.
+4. Switch to `Rack Heatmap`, drag nodes and shelves/equipment to match the physical rack, then use a heat source or fan to observe rising heat regions and local hot or humid zones.
+5. Switch to `Node Health`, unplug any node, and observe timeout-based offline detection.
 
 ## Test Checklist
 
-- 直接開啟 `index.html`，無 MQTT 時應自動進入模擬模式。
-- 手動切換三個展示模式，圖表、垂直機櫃熱力圖與卡片不應重疊或溢出。
-- 四個 topic 發送測試資料時，A/B/C/D 應正確更新。
-- 停止任一節點超過 6 秒，前端應顯示 offline。
-- 手機寬度與投影螢幕寬度都應可讀。
+- Open `index.html` directly; without MQTT, the dashboard should automatically enter simulation mode.
+- Manually switch between the three display modes; charts, rack heatmap, and cards should not overlap or overflow.
+- When test payloads are published to all four topics, A/B/C/D should update correctly.
+- If any node stops for more than 6 seconds, the frontend should show it as offline.
+- The dashboard should remain readable on phone widths and projector widths.

@@ -6,7 +6,7 @@
     AtmoLink.updateStratification();
     AtmoLink.drawHeatmap();
     AtmoLink.updateNetwork();
-    document.getElementById('last-update').textContent = '最後更新：' + new Date().toLocaleTimeString('zh-TW');
+    document.getElementById('last-update').textContent = 'Last update: ' + new Date().toLocaleTimeString('en-US');
   };
 
   function bindTabs() {

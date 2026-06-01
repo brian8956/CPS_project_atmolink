@@ -7,7 +7,7 @@
     return Math.max(min, Math.min(max, value));
   }
 
-  // 動態天花板：至少 1.7m，若有節點更高就往上延伸。
+  // Dynamic ceiling: at least 1.7 m, extended when any node is higher.
   function displayMax() {
     const values = Object.values(AtmoLink.state.heights);
     return Math.max(1.7, Math.ceil(Math.max(...values) * 10) / 10);
@@ -19,6 +19,17 @@
 
   function percentToHeight(percent) {
     return ((94 - percent) / BAND) * displayMax();
+  }
+
+  function verticalTemperaturePd(delta) {
+    if (delta <= 0) return { value: null, label: 'Not applicable: head cooler than ankle', className: 'good' };
+    if (delta >= 8) return { value: null, label: 'Out of formula range: dT >= 8°C', className: 'bad' };
+
+    const value = 100 / (1 + Math.exp(5.76 - 0.856 * delta));
+    if (delta < 2) return { value, label: 'ISO A', className: 'good' };
+    if (delta < 3) return { value, label: 'ISO B', className: 'good' };
+    if (delta < 4) return { value, label: 'ISO C', className: 'warn' };
+    return { value, label: 'Above ISO C', className: 'bad' };
   }
 
   AtmoLink.renderStratificationView = function renderStratificationView() {
@@ -37,7 +48,7 @@
         ${nodes.map((key) => {
           const y = heightToPercent(heights[key]);
           return `
-            <div class="height-node" id="height-node-${key}" data-key="${key}" style="top:${y}%" title="拖曳調整高度">
+            <div class="height-node" id="height-node-${key}" data-key="${key}" style="top:${y}%" title="Drag to adjust height">
               <b style="color:${colors[key]}">${key}</b>
               <span class="height-readout">
                 <span id="height-temp-${key}">-- °C</span>
@@ -67,7 +78,7 @@
     if (tick) { tick.style.top = `${y}%`; tick.textContent = `${AtmoLink.state.heights[key].toFixed(2)}m`; }
   }
 
-  // 高度變更後同步：卡片標籤、圖表 dataset 標籤、頭腳/梯度指標。
+  // Sync card labels, chart dataset labels, head-ankle delta, and PD after height changes.
   AtmoLink.applyHeights = function applyHeights() {
     const { nodes } = AtmoLink.config;
     const { heights } = AtmoLink.state;
@@ -153,20 +164,18 @@
       if (humEl) humEl.textContent = sensor ? `${sensor.humidity.toFixed(1)} %RH` : '-- %RH';
     });
 
-    // 依實際高度找出最低（腳）與最高（頭）且有資料的節點。
+    // Use the lowest available node as ankle height and the highest as head height.
     const ordered = nodes
       .filter((key) => sensors[key] != null)
       .sort((a, b) => heights[a] - heights[b]);
 
     const deltaLabel = document.getElementById('delta-label');
     const deltaStrong = document.querySelector('#delta-metric strong');
-    const gradientStrong = document.querySelector('#gradient-metric strong');
     const comfort = document.getElementById('comfort-metric');
 
     if (ordered.length < 2) {
-      if (deltaLabel) deltaLabel.textContent = '頭腳溫差';
+      if (deltaLabel) deltaLabel.textContent = 'Head-Ankle Delta T';
       deltaStrong.textContent = '-- °C';
-      gradientStrong.textContent = '-- °C/m';
       comfort.className = 'metric comfort';
       comfort.querySelector('strong').textContent = '--';
       return;
@@ -175,25 +184,17 @@
     const foot = ordered[0];
     const head = ordered[ordered.length - 1];
     const delta = sensors[head].temperature - sensors[foot].temperature;
-    const span = heights[head] - heights[foot];
-    const gradient = span > 0.001 ? delta / span : null;
 
-    if (deltaLabel) deltaLabel.textContent = `${heights[foot].toFixed(2)}m → ${heights[head].toFixed(2)}m 頭腳溫差`;
+    if (deltaLabel) {
+      deltaLabel.textContent = `${foot} ${heights[foot].toFixed(2)}m ankle -> ${head} ${heights[head].toFixed(2)}m head`;
+    }
     deltaStrong.textContent = `${delta.toFixed(2)} °C`;
-    gradientStrong.textContent = gradient == null ? '-- °C/m' : `${gradient.toFixed(2)} °C/m`;
 
     comfort.className = 'metric comfort';
-    const ppd = Math.min(42, 5 + Math.max(0, Math.abs(delta) - 0.5) * 7.5);
-    let label = '舒適';
-    let cls = 'good';
-    if (Math.abs(delta) >= 3) {
-      label = '高風險';
-      cls = 'bad';
-    } else if (Math.abs(delta) >= 1.8) {
-      label = '注意';
-      cls = 'warn';
-    }
-    comfort.classList.add(cls);
-    comfort.querySelector('strong').textContent = `${ppd.toFixed(0)}% · ${label}`;
+    const pd = verticalTemperaturePd(delta);
+    comfort.classList.add(pd.className);
+    comfort.querySelector('strong').textContent = pd.value == null
+      ? pd.label
+      : `${pd.value.toFixed(1)}% dissatisfied`;
   };
 })(window);
